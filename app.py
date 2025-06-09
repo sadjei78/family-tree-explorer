@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import json
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from functools import wraps
 from dotenv import load_dotenv
@@ -12,6 +15,13 @@ from generation_calculator import GenerationCalculator
 DEBUG = os.getenv('FLASK_ENV') != 'production'
 PORT = int(os.getenv('PORT', 5001))
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+
+# Email Configuration
+SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
+SMTP_USERNAME = os.getenv('SMTP_USERNAME', '')
+SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '')
+FROM_EMAIL = os.getenv('FROM_EMAIL', SMTP_USERNAME)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -98,12 +108,33 @@ def admin_logout():
 @admin_required
 def admin_dashboard():
     """Admin dashboard for managing submissions and feedback"""
+    # Get admin's current reference person
+    admin_reference_person = session.get('admin_reference_person_id')
+    if admin_reference_person is None:
+        admin_reference_person = find_main_person()
+        session['admin_reference_person_id'] = admin_reference_person
+    
+    # Get reference person name
+    reference_person = family_data['individuals'].get(admin_reference_person, {})
+    reference_name = "Unknown"
+    if reference_person.get('names'):
+        primary_name = reference_person['names'][0]
+        reference_name = f"{primary_name.get('given', '')} {primary_name.get('surname', '')}".strip()
+    
+    # Get admin profile info
+    admin_name = session.get('admin_name', reference_name)
+    admin_email = session.get('admin_email', '')
+    
     return render_template('admin.html',
                          app_version=APP_VERSION,
                          database_version=DATABASE_VERSION,
                          gedcom_filename=gedcom_file,
                          total_individuals=len(family_data['individuals']),
-                         total_families=len(family_data['families']))
+                         total_families=len(family_data['families']),
+                         admin_name=admin_name,
+                         admin_email=admin_email,
+                         reference_person_id=admin_reference_person,
+                         reference_person_name=reference_name)
 
 @app.route('/search')
 def search():
@@ -618,6 +649,128 @@ def admin_audit_log():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/admin/profile', methods=['GET', 'POST'])
+@admin_required
+def admin_profile():
+    """Manage admin profile information"""
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            session['admin_name'] = data.get('admin_name', '').strip()
+            session['admin_email'] = data.get('admin_email', '').strip()
+            
+            # Log profile update
+            log_admin_action('update_profile', {
+                'admin_name': session['admin_name'],
+                'admin_email': session['admin_email']
+            })
+            
+            return jsonify({'success': True, 'message': 'Profile updated successfully'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+    
+    # GET request - return current profile
+    return jsonify({
+        'success': True,
+        'admin_name': session.get('admin_name', ''),
+        'admin_email': session.get('admin_email', ''),
+        'reference_person_id': session.get('admin_reference_person_id'),
+        'reference_person_name': get_person_name(session.get('admin_reference_person_id', ''))
+    })
+
+@app.route('/admin/set_reference_person/<person_id>', methods=['POST'])
+@admin_required
+def admin_set_reference_person(person_id):
+    """Set admin's reference person"""
+    try:
+        if person_id not in family_data['individuals']:
+            return jsonify({'success': False, 'error': 'Invalid person ID'}), 400
+        
+        session['admin_reference_person_id'] = person_id
+        reference_name = get_person_name(person_id)
+        
+        # If admin name not set, use reference person name
+        if not session.get('admin_name'):
+            session['admin_name'] = reference_name
+        
+        # Log reference person change
+        log_admin_action('change_reference_person', {
+            'person_id': person_id,
+            'person_name': reference_name
+        })
+        
+        return jsonify({
+            'success': True,
+            'message': 'Reference person updated successfully',
+            'reference_person_name': reference_name
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/send_response', methods=['POST'])
+@admin_required
+def send_response():
+    """Send email response to submission or feedback"""
+    try:
+        data = request.get_json()
+        recipient_email = data.get('recipient_email')
+        recipient_name = data.get('recipient_name', 'User')
+        subject = data.get('subject', 'Response to your submission')
+        message_body = data.get('message', '')
+        original_subject = data.get('original_subject', '')
+        response_type = data.get('response_type', 'general')  # submission, feedback, general
+        
+        if not recipient_email or not message_body:
+            return jsonify({'success': False, 'error': 'Email and message are required'}), 400
+        
+        # Get admin info
+        admin_name = session.get('admin_name', 'Family Tree Administrator')
+        admin_email = session.get('admin_email', FROM_EMAIL)
+        
+        # Compose email subject
+        if original_subject:
+            email_subject = f"Re: {original_subject}"
+        else:
+            email_subject = subject
+        
+        # Compose email body
+        email_body = f"""Dear {recipient_name},
+
+Thank you for your {response_type} to our Family Tree Explorer.
+
+{message_body}
+
+If you have any further questions or need additional assistance, please don't hesitate to reach out.
+
+Best regards,
+{admin_name}
+Family Tree Administrator
+
+---
+This email was sent in response to your submission to the Family Tree Explorer.
+"""
+        
+        # Send email
+        success = send_email(recipient_email, email_subject, email_body, admin_email, admin_name)
+        
+        if success:
+            # Log the response
+            log_admin_action('send_email_response', {
+                'recipient_email': recipient_email,
+                'recipient_name': recipient_name,
+                'subject': email_subject,
+                'response_type': response_type,
+                'admin_name': admin_name,
+                'admin_email': admin_email
+            })
+            
+            return jsonify({'success': True, 'message': 'Email sent successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to send email. Please check email configuration.'}), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 def save_submission(submission):
     """Save a submission to the submissions file"""
     submissions_file = 'family_submissions.json'
@@ -700,6 +853,8 @@ def log_admin_action(action_type, action_data):
         'timestamp': datetime.now().isoformat(),
         'action_type': action_type,
         'admin_session': session.get('admin_authenticated', 'unknown'),
+        'admin_name': session.get('admin_name', 'Unknown Admin'),
+        'admin_email': session.get('admin_email', ''),
         'user_agent': request.headers.get('User-Agent', ''),
         'ip_address': request.remote_addr,
         'action_data': action_data
@@ -715,6 +870,42 @@ def log_admin_action(action_type, action_data):
     # Save back to file
     with open(audit_file, 'w', encoding='utf-8') as f:
         json.dump(audit_log, f, indent=2, ensure_ascii=False)
+
+def send_email(to_email, subject, body, from_email=None, from_name=None):
+    """Send email using SMTP"""
+    try:
+        if not SMTP_USERNAME or not SMTP_PASSWORD:
+            print("Email configuration not set up - email not sent")
+            return False
+        
+        if from_email is None:
+            from_email = FROM_EMAIL
+        
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = f"{from_name} <{from_email}>" if from_name else from_email
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        # Attach body
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Create SMTP session
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()  # Enable security
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        
+        # Send email
+        text = msg.as_string()
+        server.sendmail(from_email, to_email, text)
+        server.quit()
+        
+        print(f"Email sent successfully to {to_email}")
+        return True
+        
+    except Exception as e:
+        print(f"Failed to send email: {str(e)}")
+        return False
 
 def load_audit_log():
     """Load admin audit log"""

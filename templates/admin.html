@@ -220,6 +220,7 @@
             font-weight: 600;
         }
 
+        .action-btn.respond { background: #3498db; color: white; }
         .action-btn.archive { background: #f39c12; color: white; }
         .action-btn.delete { background: #e74c3c; color: white; }
         .action-btn:hover { opacity: 0.8; }
@@ -251,6 +252,90 @@
 
         .btn-secondary { background: linear-gradient(135deg, #95a5a6, #7f8c8d); color: white; }
         .btn-info { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
 
         .item-header {
             display: flex;
@@ -347,6 +432,21 @@
         <div class="header">
             <h1>🛠️ Admin Dashboard</h1>
             <p class="subtitle">Family Tree Explorer Administration Panel</p>
+            
+            <!-- Welcome Message and Profile Section -->
+            <div class="admin-welcome" style="background: #e8f5e8; color: #2d5016; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #c3e6c3;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <strong>👋 Welcome, {{ admin_name }}!</strong><br>
+                        <small>Reference Person: {{ reference_person_name }} • Email: {{ admin_email if admin_email else 'Not set' }}</small>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-info" onclick="editProfile()" style="padding: 6px 12px; font-size: 12px;">✏️ Edit Profile</button>
+                        <button class="btn btn-secondary" onclick="changeReferencePerson()" style="padding: 6px 12px; font-size: 12px;">👤 Change Reference</button>
+                    </div>
+                </div>
+            </div>
+            
             <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px solid #ffeaa7;">
                 <strong>🔒 Secure Session Active</strong> • Remember to logout when finished
             </div>
@@ -545,6 +645,7 @@
                 return `
                     <div class="submission-item">
                         <div class="item-actions">
+                            <button class="action-btn respond" onclick="respondToSubmission(${index})">📧 Respond</button>
                             <button class="action-btn archive" onclick="archiveSubmission(${index})">📁 Archive</button>
                         </div>
                         <div class="item-header">
@@ -580,6 +681,7 @@
                 return `
                     <div class="feedback-item">
                         <div class="item-actions">
+                            <button class="action-btn respond" onclick="respondToFeedback(${index})">📧 Respond</button>
                             <button class="action-btn archive" onclick="archiveFeedback(${index})">📁 Archive</button>
                         </div>
                         <div class="item-header">
@@ -895,6 +997,334 @@
             
             container.innerHTML = html;
         }
+
+        // Global variables for email responses
+        let currentSubmissions = [];
+        let currentFeedback = [];
+
+        // Profile management functions
+        function editProfile() {
+            // Load current profile data
+            fetch('/admin/profile')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('adminName').value = data.admin_name || '';
+                        document.getElementById('adminEmail').value = data.admin_email || '';
+                        document.getElementById('profileModal').style.display = 'block';
+                    } else {
+                        alert('Error loading profile: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load profile');
+                });
+        }
+
+        function saveProfile() {
+            const adminName = document.getElementById('adminName').value.trim();
+            const adminEmail = document.getElementById('adminEmail').value.trim();
+            
+            if (!adminName) {
+                alert('Please enter an admin name');
+                return;
+            }
+            
+            if (adminEmail && !isValidEmail(adminEmail)) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            fetch('/admin/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    admin_name: adminName,
+                    admin_email: adminEmail
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Profile updated successfully');
+                    closeModal('profileModal');
+                    location.reload(); // Refresh to show updated welcome message
+                } else {
+                    alert('Error updating profile: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update profile');
+            });
+        }
+
+        function changeReferencePerson() {
+            document.getElementById('referenceModal').style.display = 'block';
+            document.getElementById('personSearch').focus();
+        }
+
+        function searchForPerson() {
+            const query = document.getElementById('personSearch').value.trim();
+            const container = document.getElementById('personSearchResults');
+            
+            if (query.length < 2) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">Type at least 2 characters to search...</div>';
+                return;
+            }
+            
+            fetch(`/search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(results => {
+                    if (results.length === 0) {
+                        container.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">No people found</div>';
+                        return;
+                    }
+                    
+                    const html = results.map(person => `
+                        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" 
+                             onmouseover="this.style.background='#f5f5f5'" 
+                             onmouseout="this.style.background='white'"
+                             onclick="selectReferencePerson('${person.id}', '${safeName(person.name)}')">
+                            <strong>${safeName(person.name)}</strong>
+                            ${person.birth_year ? ' (b. ' + person.birth_year + ')' : ''}
+                            ${person.death_year ? ' (d. ' + person.death_year + ')' : ''}
+                        </div>
+                    `).join('');
+                    
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #e74c3c;">Error searching</div>';
+                });
+        }
+
+        function selectReferencePerson(personId, personName) {
+            fetch(`/admin/set_reference_person/${personId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Reference person updated successfully');
+                        closeModal('referenceModal');
+                        location.reload(); // Refresh to show updated reference person
+                    } else {
+                        alert('Error updating reference person: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to update reference person');
+                });
+        }
+
+        // Email response functions
+        function respondToSubmission(index) {
+            const submission = currentSubmissions[index];
+            if (!submission) {
+                alert('Submission not found');
+                return;
+            }
+            
+            const personName = submission.person_name || (submission.given_name + ' ' + submission.surname);
+            const recipientName = submission.submitter_name || 'User';
+            const recipientEmail = submission.submitter_email;
+            
+            if (!recipientEmail) {
+                alert('No email address found for this submission');
+                return;
+            }
+            
+            // Set up the response modal
+            document.getElementById('responseTo').value = `${recipientName} <${recipientEmail}>`;
+            document.getElementById('responseSubject').value = `Re: ${submission.type.replace('_', ' ')} for ${personName}`;
+            document.getElementById('responseMessage').value = `Thank you for your ${submission.type.replace('_', ' ')} regarding ${personName}.\n\n`;
+            
+            // Store submission data for sending
+            window.currentResponseData = {
+                recipient_email: recipientEmail,
+                recipient_name: recipientName,
+                original_subject: `${submission.type.replace('_', ' ')} for ${personName}`,
+                response_type: 'submission'
+            };
+            
+            document.getElementById('responseModal').style.display = 'block';
+        }
+
+        function respondToFeedback(index) {
+            const feedback = currentFeedback[index];
+            if (!feedback) {
+                alert('Feedback not found');
+                return;
+            }
+            
+            const recipientName = feedback.submitter_name || 'User';
+            const recipientEmail = feedback.submitter_email;
+            
+            if (!recipientEmail) {
+                alert('No email address found for this feedback');
+                return;
+            }
+            
+            // Set up the response modal
+            document.getElementById('responseTo').value = `${recipientName} <${recipientEmail}>`;
+            document.getElementById('responseSubject').value = `Re: ${feedback.subject || 'Your feedback'}`;
+            document.getElementById('responseMessage').value = `Thank you for your ${feedback.feedback_type || 'feedback'} regarding our Family Tree Explorer.\n\n`;
+            
+            // Store feedback data for sending
+            window.currentResponseData = {
+                recipient_email: recipientEmail,
+                recipient_name: recipientName,
+                original_subject: feedback.subject || 'Your feedback',
+                response_type: 'feedback'
+            };
+            
+            document.getElementById('responseModal').style.display = 'block';
+        }
+
+        function sendEmailResponse() {
+            const message = document.getElementById('responseMessage').value.trim();
+            const subject = document.getElementById('responseSubject').value.trim();
+            
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            if (!window.currentResponseData) {
+                alert('No response data found');
+                return;
+            }
+            
+            const requestData = {
+                ...window.currentResponseData,
+                message: message,
+                subject: subject
+            };
+            
+            fetch('/send_response', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Email sent successfully!');
+                    closeModal('responseModal');
+                    window.currentResponseData = null;
+                } else {
+                    alert('Error sending email: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to send email');
+            });
+        }
+
+        // Modal management
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Utility functions
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Update submission and feedback display to store data globally
+        const originalDisplaySubmissions = displaySubmissions;
+        function displaySubmissions(submissions) {
+            currentSubmissions = submissions;
+            originalDisplaySubmissions(submissions);
+        }
+
+        const originalDisplayFeedback = displayFeedback;
+        function displayFeedback(feedbackList) {
+            currentFeedback = feedbackList;
+            originalDisplayFeedback(feedbackList);
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
     </script>
+
+    <!-- Profile Edit Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Edit Admin Profile</h2>
+                <span class="close" onclick="closeModal('profileModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label for="adminName">Admin Name:</label>
+                <input type="text" id="adminName" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label for="adminEmail">Admin Email:</label>
+                <input type="email" id="adminEmail" placeholder="Enter your email address">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('profileModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reference Person Selection Modal -->
+    <div id="referenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>👤 Change Reference Person</h2>
+                <span class="close" onclick="closeModal('referenceModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label for="personSearch">Search for a person:</label>
+                <input type="text" id="personSearch" placeholder="Type a name to search..." onkeyup="searchForPerson()">
+            </div>
+            <div id="personSearchResults" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; margin-top: 10px;">
+                <div style="padding: 20px; text-align: center; color: #7f8c8d;">Start typing to search for a person...</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('referenceModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Response Modal -->
+    <div id="responseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📧 Send Email Response</h2>
+                <span class="close" onclick="closeModal('responseModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label for="responseTo">To:</label>
+                <input type="text" id="responseTo" readonly style="background: #f5f5f5;">
+            </div>
+            <div class="form-group">
+                <label for="responseSubject">Subject:</label>
+                <input type="text" id="responseSubject" placeholder="Response subject">
+            </div>
+            <div class="form-group">
+                <label for="responseMessage">Message:</label>
+                <textarea id="responseMessage" placeholder="Type your response here..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('responseModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="sendEmailResponse()">Send Email</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 
