@@ -683,8 +683,17 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Password correct, redirect to explore page
-                    window.location.href = '/explore';
+                    // Password correct, check if we have a shared person to load
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sharedPersonId = urlParams.get('person');
+                    
+                    if (sharedPersonId) {
+                        // Redirect to explore page with the shared person
+                        window.location.href = `/explore?person=${sharedPersonId}`;
+                    } else {
+                        // Regular redirect to explore page
+                        window.location.href = '/explore';
+                    }
                 } else {
                     // Show error
                     document.getElementById('passwordError').style.display = 'block';
@@ -697,6 +706,29 @@
                 alert('❌ Error checking password. Please try again.');
             });
         }
+
+        // Check for shared person link on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedPersonId = urlParams.get('person');
+            
+            if (sharedPersonId) {
+                // Show a message about the shared link
+                const welcomeText = document.querySelector('.welcome-text');
+                if (welcomeText) {
+                    const sharedMessage = document.createElement('div');
+                    sharedMessage.style.cssText = 'background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196f3;';
+                    sharedMessage.innerHTML = `
+                        <strong>🔗 Shared Family Member Link</strong><br>
+                        Someone has shared a specific family member with you. Enter the family password to view their record.
+                    `;
+                    welcomeText.appendChild(sharedMessage);
+                }
+                
+                // Auto-open the password modal
+                promptForPassword();
+            }
+        });
     </script>
 </body>
 </html> 

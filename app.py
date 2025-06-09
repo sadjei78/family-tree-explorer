@@ -44,12 +44,20 @@ generation_calc = GenerationCalculator(family_data['individuals'], family_data['
 
 # Reference person is now stored per-user in Flask sessions
 
-# Authentication decorator
+# Authentication decorators
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('admin_authenticated'):
             return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def explore_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('explore_authenticated'):
+            return jsonify({'error': 'Authentication required', 'auth_required': True}), 401
         return f(*args, **kwargs)
     return decorated_function
 
@@ -142,6 +150,7 @@ def admin_dashboard():
                          reference_person_name=reference_name)
 
 @app.route('/search')
+@explore_required
 def search():
     query = request.args.get('q', '').strip()
     if not query:
@@ -164,6 +173,7 @@ def search():
     return jsonify(results[:20])  # Limit to 20 results
 
 @app.route('/person/<person_id>')
+@explore_required
 def get_person(person_id):
     if person_id not in family_data['individuals']:
         return jsonify({'error': 'Person not found'}), 404

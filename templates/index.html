@@ -502,6 +502,58 @@
             80% { opacity: 1; transform: translateX(0); }
             100% { opacity: 0; transform: translateX(10px); }
         }
+        
+        /* Navigation back button styling */
+        .navigation-section {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .back-btn {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(149, 165, 166, 0.3);
+        }
+        
+        .back-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #7f8c8d, #95a5a6);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(149, 165, 166, 0.4);
+        }
+        
+        .back-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+        
+        .breadcrumb {
+            background: rgba(52, 152, 219, 0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #2c3e50;
+            font-weight: 500;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+        
+        .breadcrumb-arrow {
+            margin: 0 8px;
+            color: #7f8c8d;
+        }
     </style>
 </head>
 <body>
@@ -735,10 +787,24 @@
         const personDetails = document.getElementById('personDetails');
         const statsGrid = document.getElementById('statsGrid');
         
+        // Navigation history for back functionality
+        let navigationHistory = [];
+        let historyIndex = -1;
+        
         // Load initial person on page load
         document.addEventListener('DOMContentLoaded', function() {
             if (currentReferencePersonId) {
                 selectPerson(currentReferencePersonId);
+            }
+        });
+        
+        // Keyboard navigation support
+        document.addEventListener('keydown', function(event) {
+            // Alt + Left Arrow or Backspace for going back
+            if ((event.altKey && event.key === 'ArrowLeft') || 
+                (event.key === 'Backspace' && !event.target.matches('input, textarea'))) {
+                event.preventDefault();
+                goBack();
             }
         });
 
@@ -753,13 +819,16 @@
             }
 
             searchTimeout = setTimeout(() => {
-                fetch(`/search?q=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
+                authenticatedFetch(`/search?q=${encodeURIComponent(query)}`)
                     .then(data => {
                         displaySearchResults(data);
                     })
                     .catch(error => {
                         console.error('Search error:', error);
+                        if (error.message !== 'Authentication required') {
+                            searchResults.innerHTML = '<div class="search-result-item">Search error. Please try again.</div>';
+                            searchResults.style.display = 'block';
+                        }
                     });
             }, 300);
         });
@@ -792,10 +861,22 @@
             searchResults.style.display = 'block';
         }
 
-        function selectPerson(personId) {
+        function selectPerson(personId, fromHistory = false) {
             if (!personId) {
                 console.error('No person ID provided');
                 return;
+            }
+            
+            // Add to navigation history only if not navigating from history
+            if (!fromHistory && currentPersonId && currentPersonId !== personId) {
+                // Remove any history after current index (if user went back and then navigated forward)
+                navigationHistory = navigationHistory.slice(0, historyIndex + 1);
+                // Add current person to history before navigating to new person
+                navigationHistory.push({
+                    id: currentPersonId,
+                    name: getCurrentPersonName()
+                });
+                historyIndex = navigationHistory.length - 1;
             }
             
             currentPersonId = personId;
@@ -805,26 +886,71 @@
             personDetails.innerHTML = '<div class="loading">Loading person details...</div>';
             personDetails.style.display = 'block';
             
-            fetch(`/person/${personId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+            authenticatedFetch(`/person/${personId}`)
                 .then(data => {
                     displayPersonDetails(data);
+                    updateNavigationButtons();
                 })
                 .catch(error => {
                     console.error('Person details error:', error);
-                    personDetails.innerHTML = `
-                        <div class="person-details" style="text-align: center; padding: 30px; color: #e74c3c;">
-                            <h3>⚠️ Error Loading Person</h3>
-                            <p>Sorry, we couldn't load information for this person.</p>
-                            <p style="font-size: 0.9em; color: #7f8c8d;">Please try searching for someone else.</p>
-                        </div>
-                    `;
+                    if (error.message !== 'Authentication required') {
+                        personDetails.innerHTML = `
+                            <div class="person-details" style="text-align: center; padding: 30px; color: #e74c3c;">
+                                <h3>⚠️ Error Loading Person</h3>
+                                <p>Sorry, we couldn't load information for this person.</p>
+                                <p style="font-size: 0.9em; color: #7f8c8d;">Please try searching for someone else.</p>
+                            </div>
+                        `;
+                    }
                 });
+        }
+        
+        function getCurrentPersonName() {
+            const nameElement = document.querySelector('.person-name');
+            return nameElement ? nameElement.textContent : 'Unknown Person';
+        }
+        
+        function goBack() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                const previousPerson = navigationHistory[historyIndex];
+                selectPerson(previousPerson.id, true);
+            }
+        }
+        
+        function getBreadcrumbText() {
+            if (navigationHistory.length === 0) {
+                return 'Start of navigation';
+            }
+            
+            const maxVisible = 3;
+            const totalHistory = navigationHistory.length;
+            
+            if (totalHistory <= maxVisible) {
+                return navigationHistory.map((person, index) => 
+                    `${person.name}${index < totalHistory - 1 ? ' <span class="breadcrumb-arrow">→</span> ' : ''}`
+                ).join('') + ` <span class="breadcrumb-arrow">→</span> Current`;
+            } else {
+                const start = Math.max(0, totalHistory - maxVisible);
+                const visible = navigationHistory.slice(start);
+                return (start > 0 ? '... <span class="breadcrumb-arrow">→</span> ' : '') +
+                       visible.map((person, index) => 
+                           `${person.name}${index < visible.length - 1 ? ' <span class="breadcrumb-arrow">→</span> ' : ''}`
+                       ).join('') + ` <span class="breadcrumb-arrow">→</span> Current`;
+            }
+        }
+        
+        function updateNavigationButtons() {
+            const backButton = document.getElementById('backButton');
+            const breadcrumb = document.getElementById('breadcrumb');
+            
+            if (backButton) {
+                backButton.disabled = historyIndex <= 0;
+            }
+            
+            if (breadcrumb) {
+                breadcrumb.innerHTML = getBreadcrumbText();
+            }
         }
 
         function displayPersonDetails(data) {
@@ -851,6 +977,14 @@
                         ${relationship === 'Self' ? '👤 Reference Person' : `Relationship: ${relationship}`}
                     </div>
                     <div class="person-summary">${data.summary || 'No information available'}</div>
+                    <div class="navigation-section">
+                        <button class="back-btn" id="backButton" onclick="goBack()" ${historyIndex <= 0 ? 'disabled' : ''}>
+                            ← Back
+                        </button>
+                        <div class="breadcrumb" id="breadcrumb">
+                            ${getBreadcrumbText()}
+                        </div>
+                    </div>
                     <div class="share-section">
                         <button class="share-btn" onclick="copyPersonLink('${currentPersonId}', '${primaryName}')">
                             🔗 Share Link
@@ -1176,8 +1310,7 @@
             const newReference = prompt('Search for a person to set as reference:', '');
             if (newReference && newReference.trim()) {
                 // Perform search and show results for selection
-                fetch(`/search?q=${encodeURIComponent(newReference.trim())}`)
-                    .then(response => response.json())
+                authenticatedFetch(`/search?q=${encodeURIComponent(newReference.trim())}`)
                     .then(data => {
                         if (data.length === 0) {
                             alert('No people found with that name. Please try a different search.');
@@ -1273,6 +1406,48 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
+
+        // Authentication error handler
+        function handleAuthenticationError(error) {
+            console.log('Authentication error detected:', error);
+            alert('🔐 Session expired. You need to re-enter the family password.');
+            // Redirect to homepage to re-authenticate
+            window.location.href = '/';
+        }
+
+        // Enhanced fetch wrapper that handles authentication errors
+        function authenticatedFetch(url, options = {}) {
+            return fetch(url, options)
+                .then(response => {
+                    if (response.status === 401) {
+                        return response.json().then(data => {
+                            if (data.auth_required) {
+                                handleAuthenticationError(data);
+                                throw new Error('Authentication required');
+                            }
+                            throw new Error(data.error || 'Authentication failed');
+                        });
+                    }
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                });
+        }
+
+        // Check for shared person link on page load and load it automatically
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedPersonId = urlParams.get('person');
+            
+            if (sharedPersonId) {
+                // Load the shared person automatically
+                selectPerson(sharedPersonId);
+                // Clear the URL parameter after loading
+                const newUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        });
 
         // Load stats on page load
         loadStats();
