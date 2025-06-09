@@ -73,6 +73,67 @@
             margin: 0 auto 30px;
         }
 
+        .explore-cta {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .btn-explore {
+            display: inline-block;
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            color: white;
+            text-decoration: none;
+            padding: 25px 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 184, 148, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-width: 350px;
+        }
+
+        .btn-explore:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0, 184, 148, 0.4);
+            text-decoration: none;
+            color: white;
+        }
+
+        .btn-explore::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-explore:hover::before {
+            left: 100%;
+        }
+
+        .explore-icon {
+            font-size: 2em;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .explore-text {
+            font-size: 1.3em;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .explore-subtitle {
+            font-size: 0.95em;
+            opacity: 0.9;
+            display: block;
+            font-weight: 400;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -226,6 +287,21 @@
                 width: 100%;
                 max-width: 300px;
             }
+
+            .btn-explore {
+                min-width: auto;
+                width: 90%;
+                max-width: 320px;
+                padding: 20px 30px;
+            }
+
+            .explore-text {
+                font-size: 1.2em;
+            }
+
+            .explore-subtitle {
+                font-size: 0.9em;
+            }
         }
 
         .modal {
@@ -341,6 +417,14 @@
                 <p>Explore the rich heritage of the Adjei family spanning over 160 years of history. Our interactive family tree connects <strong>{{ total_individuals }} individuals</strong> across <strong>{{ total_families }} families</strong> with roots in Ghana and branches reaching across Germany, the United States, Canada, and the United Kingdom.</p>
                 
                 <p>Discover your place in the family timeline with our unique generation labeling system, explore relationships through our intelligent calculator, and contribute to preserving our shared heritage for future generations.</p>
+            </div>
+
+            <div class="explore-cta">
+                <a href="/explore" class="btn-explore">
+                    <span class="explore-icon">🌳</span>
+                    <span class="explore-text">Start Exploring the Family Tree</span>
+                    <span class="explore-subtitle">Begin your journey through our family history</span>
+                </a>
             </div>
 
             <div class="stats-grid">
