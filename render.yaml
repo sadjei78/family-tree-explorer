@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: family-tree-explorer
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: FLASK_ENV
+        value: production
+      - key: GEDCOM_FILE
+        value: Weku-2025.ged
+      # These will be set manually in Render dashboard for security:
+      # - ADMIN_PASSWORD (set this manually)
+      # - SECRET_KEY (set this manually) 

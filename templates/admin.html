@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Family Tree Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .version-info {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            background: #95a5a6;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.primary {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .nav-btn.primary:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .dashboard-card h2 {
+            color: #2c3e50;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 1.3em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .endpoint-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .endpoint-item {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .endpoint-url {
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .endpoint-btn {
+            padding: 6px 12px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+        }
+
+        .endpoint-btn:hover {
+            background: #2980b9;
+        }
+
+        .submissions-container, .feedback-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .submission-item, .feedback-item {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            background: white;
+            margin: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .item-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .item-date {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .item-type {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+        }
+
+        .type-correction { background: #e74c3c; }
+        .type-new_person { background: #27ae60; }
+        .type-feedback { background: #9b59b6; }
+        .type-question { background: #f39c12; }
+        .type-bug { background: #e74c3c; }
+        .type-feature { background: #3498db; }
+        .type-general { background: #95a5a6; }
+
+        .item-content {
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #d63031;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-success { background: linear-gradient(135deg, #27ae60, #219a52); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .nav-buttons { flex-direction: column; align-items: center; }
+            .nav-btn { width: 100%; max-width: 300px; text-align: center; }
+            .endpoint-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛠️ Admin Dashboard</h1>
+            <p class="subtitle">Family Tree Explorer Administration Panel</p>
+            <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px solid #ffeaa7;">
+                <strong>🔒 Secure Session Active</strong> • Remember to logout when finished
+            </div>
+            <div class="version-info">
+                Version {{ app_version }} • Database {{ database_version }} • {{ gedcom_filename }}
+            </div>
+            
+            <div class="nav-buttons">
+                <a href="/" class="nav-btn">🏠 Homepage</a>
+                <a href="/explore" class="nav-btn">🌳 Explorer</a>
+                <a href="/version" class="nav-btn">ℹ️ Version Info</a>
+                <a href="#" onclick="refreshData()" class="nav-btn primary">🔄 Refresh Data</a>
+                <a href="/admin/logout" class="nav-btn" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">🚪 Logout</a>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <h2><span class="card-icon">📊</span>System Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalIndividuals">{{ total_individuals }}</span>
+                        <div class="stat-label">Individuals</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalFamilies">{{ total_families }}</span>
+                        <div class="stat-label">Families</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="submissionCount">-</span>
+                        <div class="stat-label">Submissions</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="feedbackCount">-</span>
+                        <div class="stat-label">Feedback</div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="exportGedcom()">📁 Export GEDCOM</button>
+                    <button class="btn btn-success" onclick="backupData()">💾 Backup Data</button>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h2><span class="card-icon">🔗</span>API Endpoints</h2>
+                <ul class="endpoint-list">
+                    <li class="endpoint-item">
+                        <span class="endpoint-url">/stats</span>
+                        <a href="/stats" class="endpoint-btn" target="_blank">View</a>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-url">/version</span>
+                        <a href="/version" class="endpoint-btn" target="_blank">View</a>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-url">/export_submissions</span>
+                        <a href="/export_submissions" class="endpoint-btn" target="_blank">Export</a>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-url">/export_feedback</span>
+                        <a href="/export_feedback" class="endpoint-btn" target="_blank">Export</a>
+                    </li>
+                </ul>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-warning" onclick="testEndpoints()">🧪 Test All Endpoints</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <h2><span class="card-icon">👨‍👩‍👧‍👦</span>Family Submissions</h2>
+            <div id="submissionsContainer" class="submissions-container">
+                <div class="loading">Loading submissions...</div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="loadSubmissions()">🔄 Refresh</button>
+                <button class="btn btn-success" onclick="exportSubmissions()">📥 Export All</button>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <h2><span class="card-icon">💬</span>User Feedback</h2>
+            <div id="feedbackContainer" class="feedback-container">
+                <div class="loading">Loading feedback...</div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="loadFeedback()">🔄 Refresh</button>
+                <button class="btn btn-success" onclick="exportFeedback()">📥 Export All</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSubmissions();
+            loadFeedback();
+        });
+
+        function refreshData() {
+            loadSubmissions();
+            loadFeedback();
+            updateStats();
+        }
+
+        function loadSubmissions() {
+            const container = document.getElementById('submissionsContainer');
+            container.innerHTML = '<div class="loading">Loading submissions...</div>';
+            
+            fetch('/export_submissions')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displaySubmissions(data.submissions || []);
+                        document.getElementById('submissionCount').textContent = data.count || 0;
+                    } else {
+                        container.innerHTML = '<div class="error-message">Error loading submissions: ' + (data.error || 'Unknown error') + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.innerHTML = '<div class="error-message">Failed to load submissions</div>';
+                });
+        }
+
+        function loadFeedback() {
+            const container = document.getElementById('feedbackContainer');
+            container.innerHTML = '<div class="loading">Loading feedback...</div>';
+            
+            fetch('/export_feedback')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayFeedback(data.feedback || []);
+                        document.getElementById('feedbackCount').textContent = data.count || 0;
+                    } else {
+                        container.innerHTML = '<div class="error-message">Error loading feedback: ' + (data.error || 'Unknown error') + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.innerHTML = '<div class="error-message">Failed to load feedback</div>';
+                });
+        }
+
+        function displaySubmissions(submissions) {
+            const container = document.getElementById('submissionsContainer');
+            
+            if (submissions.length === 0) {
+                container.innerHTML = '<div class="loading">No submissions found</div>';
+                return;
+            }
+
+            const html = submissions.map(submission => {
+                const date = new Date(submission.timestamp).toLocaleDateString();
+                const time = new Date(submission.timestamp).toLocaleTimeString();
+                
+                return `
+                    <div class="submission-item">
+                        <div class="item-header">
+                            <div class="item-title">${safeName(submission.person_name || submission.given_name + ' ' + submission.surname)}</div>
+                            <div class="item-date">${date} ${time}</div>
+                        </div>
+                        <div class="item-type type-${submission.type}">${submission.type.replace('_', ' ').toUpperCase()}</div>
+                        <div class="item-content">
+                            <strong>Submitter:</strong> ${safeName(submission.submitter_name)} (${safeName(submission.submitter_email)})<br>
+                            ${submission.changes ? '<strong>Changes:</strong> ' + safeName(submission.changes) + '<br>' : ''}
+                            ${submission.notes ? '<strong>Notes:</strong> ' + safeName(submission.notes) + '<br>' : ''}
+                            ${submission.sources ? '<strong>Sources:</strong> ' + safeName(submission.sources) : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function displayFeedback(feedbackList) {
+            const container = document.getElementById('feedbackContainer');
+            
+            if (feedbackList.length === 0) {
+                container.innerHTML = '<div class="loading">No feedback found</div>';
+                return;
+            }
+
+            const html = feedbackList.map(feedback => {
+                const date = new Date(feedback.timestamp).toLocaleDateString();
+                const time = new Date(feedback.timestamp).toLocaleTimeString();
+                
+                return `
+                    <div class="feedback-item">
+                        <div class="item-header">
+                            <div class="item-title">${safeName(feedback.subject)}</div>
+                            <div class="item-date">${date} ${time}</div>
+                        </div>
+                        <div class="item-type type-${feedback.feedback_type}">${feedback.feedback_type ? feedback.feedback_type.toUpperCase() : 'GENERAL'}</div>
+                        <div class="item-content">
+                            <strong>From:</strong> ${safeName(feedback.submitter_name)} ${feedback.submitter_email ? '(' + safeName(feedback.submitter_email) + ')' : ''}<br>
+                            <strong>Message:</strong> ${safeName(feedback.message)}<br>
+                            ${feedback.page_url ? '<strong>Page:</strong> ' + safeName(feedback.page_url) : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function safeName(value) {
+            if (value === null || value === undefined || value === '') {
+                return 'Not provided';
+            }
+            return String(value).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function exportSubmissions() { window.open('/export_submissions', '_blank'); }
+        function exportFeedback() { window.open('/export_feedback', '_blank'); }
+        function exportGedcom() { alert('GEDCOM export functionality would export the current database file.'); }
+        function backupData() { alert('Backup functionality would create a timestamped backup of all data files.'); }
+
+        function testEndpoints() {
+            const endpoints = ['/stats', '/version', '/export_submissions', '/export_feedback'];
+            Promise.all(endpoints.map(endpoint => 
+                fetch(endpoint)
+                    .then(response => ({ endpoint, status: response.status, ok: response.ok }))
+                    .catch(error => ({ endpoint, status: 'error', ok: false, error: error.message }))
+            )).then(results => {
+                const message = results.map(result => 
+                    `${result.endpoint}: ${result.ok ? '✅ OK' : '❌ ' + result.status}`
+                ).join('\n');
+                alert('Endpoint Test Results:\n\n' + message);
+            });
+        }
+
+        function updateStats() {
+            fetch('/stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data) {
+                        document.getElementById('totalIndividuals').textContent = data.total_individuals || 0;
+                        document.getElementById('totalFamilies').textContent = data.total_families || 0;
+                    }
+                })
+                .catch(error => console.error('Error updating stats:', error));
+        }
+    </script>
+</body>
+</html> 
