@@ -51,7 +51,22 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('admin_authenticated'):
-            return redirect(url_for('admin_login'))
+            # Check if this is an AJAX request or API endpoint
+            is_ajax = (
+                request.headers.get('Content-Type') == 'application/json' or 
+                request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                request.headers.get('Accept', '').startswith('application/json') or
+                'api' in request.endpoint or
+                request.path.startswith('/search_') or
+                request.path.startswith('/export_') or
+                request.path.startswith('/update_') or
+                request.path.startswith('/archive_') or
+                request.path.startswith('/delete_')
+            )
+            if is_ajax:
+                return jsonify({'error': 'Admin authentication required', 'auth_required': True}), 401
+            else:
+                return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -791,6 +806,155 @@ def admin_set_reference_person(person_id):
             'reference_person_name': reference_name
         })
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/update_submission_admin', methods=['POST'])
+@admin_required
+def update_submission_admin():
+    """Admin endpoint to update submission triage status, notes, reference person"""
+    try:
+        data = request.get_json()
+        submission_id = data.get('submission_id')
+        
+        if not submission_id:
+            return jsonify({'success': False, 'error': 'Submission ID required'}), 400
+        
+        updates = {}
+        
+        # Update triage status
+        if 'triage_status' in data:
+            updates['triage_status'] = data['triage_status']
+        
+        # Update notes
+        if 'notes' in data:
+            updates['notes'] = data['notes']
+        
+        # Update reference person
+        if 'reference_person_id' in data:
+            person_id = data['reference_person_id']
+            if person_id and person_id in family_data['individuals']:
+                updates['reference_person_id'] = person_id
+                updates['reference_person_name'] = get_person_name(person_id)
+            elif person_id == '':  # Allow clearing reference person
+                updates['reference_person_id'] = ''
+                updates['reference_person_name'] = ''
+        
+        if not updates:
+            return jsonify({'success': False, 'error': 'No valid updates provided'}), 400
+        
+        # Update database
+        success = db.update_submission(submission_id, updates)
+        
+        if success:
+            # Log the update action
+            log_admin_action('update_submission_admin', {
+                'submission_id': submission_id,
+                'updates': updates,
+                'admin_name': session.get('admin_name', 'admin')
+            })
+            
+            return jsonify({'success': True, 'message': 'Submission updated successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update submission'}), 400
+            
+    except Exception as e:
+        logging.error(f"Update submission admin error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/update_feedback_admin', methods=['POST'])
+@admin_required
+def update_feedback_admin():
+    """Admin endpoint to update feedback triage status, notes, reference person"""
+    try:
+        data = request.get_json()
+        feedback_id = data.get('feedback_id')
+        
+        if not feedback_id:
+            return jsonify({'success': False, 'error': 'Feedback ID required'}), 400
+        
+        updates = {}
+        
+        # Update triage status
+        if 'triage_status' in data:
+            updates['triage_status'] = data['triage_status']
+        
+        # Update notes
+        if 'notes' in data:
+            updates['notes'] = data['notes']
+        
+        # Update reference person
+        if 'reference_person_id' in data:
+            person_id = data['reference_person_id']
+            if person_id and person_id in family_data['individuals']:
+                updates['reference_person_id'] = person_id
+                updates['reference_person_name'] = get_person_name(person_id)
+            elif person_id == '':  # Allow clearing reference person
+                updates['reference_person_id'] = ''
+                updates['reference_person_name'] = ''
+        
+        if not updates:
+            return jsonify({'success': False, 'error': 'No valid updates provided'}), 400
+        
+        # Update database
+        success = db.update_feedback(feedback_id, updates)
+        
+        if success:
+            # Log the update action
+            log_admin_action('update_feedback_admin', {
+                'feedback_id': feedback_id,
+                'updates': updates,
+                'admin_name': session.get('admin_name', 'admin')
+            })
+            
+            return jsonify({'success': True, 'message': 'Feedback updated successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update feedback'}), 400
+            
+    except Exception as e:
+        logging.error(f"Update feedback admin error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/search_person_for_admin', methods=['GET'])
+@admin_required
+def search_person_for_admin():
+    """Search for persons to assign as reference person in admin interface"""
+    try:
+        query = request.args.get('q', '').lower()
+        
+        if len(query) < 2:
+            return jsonify({'success': False, 'error': 'Query too short'}), 400
+        
+        matches = []
+        for person_id, person in family_data['individuals'].items():
+            name_parts = []
+            if person.get('given_name'):
+                name_parts.append(person['given_name'])
+            if person.get('surname'):
+                name_parts.append(person['surname'])
+            
+            full_name = ' '.join(name_parts).lower()
+            
+            if query in full_name or any(query in part.lower() for part in name_parts if part):
+                matches.append({
+                    'id': person_id,
+                    'name': ' '.join(name_parts),
+                    'birth_year': person.get('birth_year', ''),
+                    'death_year': person.get('death_year', '')
+                })
+        
+        # Sort by relevance (exact matches first, then partial matches)
+        matches.sort(key=lambda x: (
+            0 if query == x['name'].lower() else 1,
+            x['name'].lower()
+        ))
+        
+        return jsonify({
+            'success': True,
+            'matches': matches[:20]  # Limit to 20 results
+        })
+        
+    except Exception as e:
+        logging.error(f"Person search error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/send_response', methods=['POST'])

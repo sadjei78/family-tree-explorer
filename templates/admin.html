@@ -1510,8 +1510,23 @@
             resultsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">Searching...</div>';
             
             fetch(`/search_person_for_admin?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 401) {
+                        // Authentication required - redirect to login
+                        window.location.href = '/admin/login';
+                        return;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data) return; // Handle redirect case
+                    
+                    if (data.auth_required) {
+                        // Authentication required - redirect to login
+                        window.location.href = '/admin/login';
+                        return;
+                    }
+                    
                     if (data.success && data.matches.length > 0) {
                         const html = data.matches.map(person => `
                             <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; hover:background: #f5f5f5;" 
