@@ -598,6 +598,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        storeSubmissionsData(data.submissions || []);
                         displaySubmissions(data.submissions || []);
                         document.getElementById('submissionCount').textContent = data.count || 0;
                     } else {
@@ -618,6 +619,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        storeFeedbackData(data.feedback || []);
                         displayFeedback(data.feedback || []);
                         document.getElementById('feedbackCount').textContent = data.count || 0;
                     } else {
@@ -1235,17 +1237,13 @@
             return emailRegex.test(email);
         }
 
-        // Update submission and feedback display to store data globally
-        const originalDisplaySubmissions = displaySubmissions;
-        function displaySubmissions(submissions) {
+        // Store submission and feedback data globally when displaying
+        function storeSubmissionsData(submissions) {
             currentSubmissions = submissions;
-            originalDisplaySubmissions(submissions);
         }
 
-        const originalDisplayFeedback = displayFeedback;
-        function displayFeedback(feedbackList) {
+        function storeFeedbackData(feedbackList) {
             currentFeedback = feedbackList;
-            originalDisplayFeedback(feedbackList);
         }
 
         // Close modals when clicking outside
