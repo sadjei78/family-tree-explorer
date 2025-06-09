@@ -8,6 +8,11 @@ from gedcom_parser import GedcomParser
 from relationship_calculator import RelationshipCalculator
 from generation_calculator import GenerationCalculator
 
+# Configuration
+DEBUG = os.getenv('FLASK_ENV') != 'production'
+PORT = int(os.getenv('PORT', 5001))
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -15,15 +20,14 @@ load_dotenv()
 APP_VERSION = "2025.06.1"  # Format: YEAR.MONTH.DATABASE_VERSION
 DATABASE_VERSION = "1.0"   # Increment when GEDCOM data is updated
 LAST_UPDATED = "June 2025"
-GEDCOM_FILENAME = os.getenv('GEDCOM_FILE', 'Weku-2025.ged')  # Configurable filename
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')  # Change this!
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')  # Change this!
 
-# Initialize the GEDCOM parser and load data
+# Initialize the GEDCOM parser
 parser = GedcomParser()
-family_data = parser.parse_file(GEDCOM_FILENAME)
+gedcom_file = os.getenv('GEDCOM_FILE_PATH', 'sample-family.ged')  # Fallback to sample data
+family_data = parser.parse_file(gedcom_file)
 relationship_calc = RelationshipCalculator(family_data)
 generation_calc = GenerationCalculator(family_data['individuals'], family_data['families'])
 
@@ -599,7 +603,4 @@ def generate_gedcom_export(submissions):
 
 if __name__ == '__main__':
     # Use environment variables for production deployment
-    port = int(os.environ.get('PORT', 5001))  # Default to 5001 for development
-    debug = os.environ.get('FLASK_ENV', 'development') != 'production'
-    
-    app.run(host='0.0.0.0', port=port, debug=debug) 
+    app.run(host='0.0.0.0', port=PORT, debug=DEBUG) 

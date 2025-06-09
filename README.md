@@ -172,6 +172,28 @@ This project is licensed under the MIT License - see the `LICENSE` file for deta
 - Genealogy data managed with care and respect for privacy
 - Special thanks to family members who contributed historical information
 
+## 🔒 Privacy & Data
+
+**Important**: This application works with GEDCOM files that contain sensitive personal and family information. You have several options for handling your data:
+
+### Option 1: Environment Variable (Recommended)
+Set your GEDCOM file path using an environment variable:
+```bash
+export GEDCOM_FILE_PATH="/path/to/your/secure/family-tree.ged"
+```
+
+### Option 2: Use Sample Data
+The repository includes `sample-family.ged` with fictional data for testing purposes.
+
+### Option 3: Private Repository
+Keep your entire repository private if you want to include your real GEDCOM file.
+
+### Data Security
+- GEDCOM files (*.ged) are excluded from version control via .gitignore
+- Admin access is password-protected
+- Use HTTPS in production deployments
+- Regular backups are recommended
+
 ---
 
 **🌳 Preserving family history, one connection at a time.** 

@@ -1,5 +1,26 @@
 # 🚀 Deployment Guide - Family Tree Explorer
 
+## 🔒 GEDCOM File Privacy Options
+
+**IMPORTANT**: Your GEDCOM file contains sensitive personal and family information. You have several options for handling this:
+
+### Option 1: Environment Variable (Recommended)
+Keep your GEDCOM file outside the repository and use an environment variable:
+1. Place your GEDCOM file in a secure location (not in the git repository)
+2. Set the `GEDCOM_FILE_PATH` environment variable to point to your file
+3. Example: `GEDCOM_FILE_PATH=/path/to/your/secure/family-tree.ged`
+
+### Option 2: Private Repository
+Make your entire repository private on GitHub/GitLab instead of public.
+
+### Option 3: Sample Data for Public Repo
+Create a small sample GEDCOM file with fictional data for the public repository, and use your real data only in production.
+
+### Option 4: Runtime Upload
+Modify the application to allow GEDCOM file upload through the admin interface (requires additional development).
+
+---
+
 This guide will help you deploy the Family Tree Explorer app so others can access it online.
 
 ## 🎯 Quick Deploy Options

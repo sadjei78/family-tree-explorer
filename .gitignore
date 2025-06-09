@@ -17,7 +17,8 @@ env.bak/
 venv.bak/
 
 # Data Files (optional - uncomment if you don't want to commit GEDCOM files)
-# *.ged
+*.ged
+*.GED
 
 # Logs
 *.log
@@ -101,4 +102,7 @@ instance/
 !Weku-2025.ged
 !requirements.txt
 !Procfile
-!runtime.txt 
+!runtime.txt
+
+# Flask session files
+flask_session/ 
