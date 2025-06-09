@@ -456,6 +456,52 @@
                 grid-template-columns: 1fr;
             }
         }
+        
+        /* Share button styling */
+        .share-section {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .share-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .share-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #3498db);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .share-btn:active {
+            transform: translateY(0);
+        }
+        
+        .share-feedback {
+            color: #27ae60;
+            font-weight: 600;
+            font-size: 0.9em;
+            animation: fadeInOut 2s ease-in-out;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-10px); }
+            20% { opacity: 1; transform: translateX(0); }
+            80% { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(10px); }
+        }
     </style>
 </head>
 <body>
@@ -805,6 +851,12 @@
                         ${relationship === 'Self' ? '👤 Reference Person' : `Relationship: ${relationship}`}
                     </div>
                     <div class="person-summary">${data.summary || 'No information available'}</div>
+                    <div class="share-section">
+                        <button class="share-btn" onclick="copyPersonLink('${currentPersonId}', '${primaryName}')">
+                            🔗 Share Link
+                        </button>
+                        <span class="share-feedback" id="shareFeedback" style="display: none;">✓ Link copied!</span>
+                    </div>
                 </div>
                 
                 <div class="info-grid">
@@ -1160,8 +1212,73 @@
             }
         }
 
+        // Share person link function
+        function copyPersonLink(personId, personName) {
+            // Create the share URL - since we don't have direct person URLs, 
+            // we'll create a URL that opens the person when accessed
+            const shareUrl = `${window.location.origin}${window.location.pathname}?person=${personId}`;
+            
+            // Try to copy to clipboard
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    showShareFeedback();
+                }).catch(err => {
+                    // Fallback to the older method
+                    fallbackCopyToClipboard(shareUrl);
+                });
+            } else {
+                // Fallback for older browsers or non-secure contexts
+                fallbackCopyToClipboard(shareUrl);
+            }
+        }
+
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showShareFeedback();
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                alert('Unable to copy link. Please copy manually: ' + text);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showShareFeedback() {
+            const feedback = document.getElementById('shareFeedback');
+            if (feedback) {
+                feedback.style.display = 'inline';
+                setTimeout(() => {
+                    feedback.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        // Check if URL has person parameter and load that person
+        function checkUrlForPerson() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const personId = urlParams.get('person');
+            if (personId) {
+                selectPerson(personId);
+                // Clean up the URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
         // Load stats on page load
         loadStats();
+        
+        // Check for person parameter in URL
+        checkUrlForPerson();
     </script>
 </body>
 </html> 

@@ -157,6 +157,48 @@ class RelationshipCalculator:
                 rel2 in ["Parent", "Father", "Mother"] and 
                 rel3 == "Sibling"):
                 return self._get_aunt_uncle_in_law_relationship(person2_id)
+            
+            # Spouse's sibling's spouse (spouse -> sibling -> spouse)
+            if (rel1 == "Spouse" and 
+                rel2 == "Sibling" and 
+                rel3 == "Spouse"):
+                return self._get_sibling_in_law_relationship(person2_id)
+            
+            # Spouse's sibling's children (spouse -> sibling -> child)
+            if (rel1 == "Spouse" and 
+                rel2 == "Sibling" and 
+                rel3 in ["Child", "Son", "Daughter"]):
+                return self._get_niece_nephew_relationship(person2_id)
+            
+            # Sibling's spouse's sibling (sibling -> spouse -> sibling)
+            if (rel1 == "Sibling" and 
+                rel2 == "Spouse" and 
+                rel3 == "Sibling"):
+                return self._get_sibling_in_law_relationship(person2_id)
+        
+        # Handle 5-step relationships for very extended in-law relationships
+        if len(path) == 5:
+            middle1 = path[1]
+            middle2 = path[2]
+            middle3 = path[3]
+            rel1 = self._get_direct_relationship(person1_id, middle1)
+            rel2 = self._get_direct_relationship(middle1, middle2)
+            rel3 = self._get_direct_relationship(middle2, middle3)
+            rel4 = self._get_direct_relationship(middle3, person2_id)
+            
+            # Spouse's sibling's spouse's sibling (spouse -> sibling -> spouse -> sibling)
+            if (rel1 == "Spouse" and 
+                rel2 == "Sibling" and 
+                rel3 == "Spouse" and 
+                rel4 == "Sibling"):
+                return self._get_sibling_in_law_relationship(person2_id)
+            
+            # Spouse's sibling's child's spouse (spouse -> sibling -> child -> spouse)
+            if (rel1 == "Spouse" and 
+                rel2 == "Sibling" and 
+                rel3 in ["Child", "Son", "Daughter"] and 
+                rel4 == "Spouse"):
+                return self._get_child_in_law_relationship(person2_id)
         
         # For complex relationships, provide a general description
         generations_up = 0
