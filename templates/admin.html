@@ -194,8 +194,56 @@
         }
 
         .archived-item {
-            background: #f5f5f5;
+            background: #f8f9fa;
             border-left: 4px solid #95a5a6;
+            opacity: 0.9;
+            position: relative;
+        }
+
+        .archived-item::before {
+            content: "📁";
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        .archived-item .item-header {
+            margin-left: 25px;
+        }
+
+        .archived-item .item-type {
+            opacity: 0.9;
+            border: 2px solid rgba(149, 165, 166, 0.3);
+            color: #2c3e50 !important;
+            text-shadow: none !important;
+            background: rgba(149, 165, 166, 0.2) !important;
+            font-weight: 700;
+        }
+
+        .archived-item .item-title {
+            color: #34495e;
+            font-weight: 600;
+        }
+
+        .archived-item .item-date {
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .archived-item .item-content {
+            background: rgba(255,255,255,0.8);
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid rgba(149, 165, 166, 0.2);
+            line-height: 1.6;
+        }
+
+        .archived-item .item-content strong {
+            color: #2c3e50;
+            font-weight: 600;
         }
 
         .audit-item {
@@ -207,24 +255,152 @@
             top: 10px;
             right: 10px;
             display: flex;
-            gap: 5px;
+            gap: 4px; /* Reduced gap for tighter spacing */
             z-index: 10;
         }
 
         .action-btn {
-            padding: 4px 8px;
-            font-size: 11px;
+            padding: 4px 6px; /* Slightly smaller padding */
+            font-size: 10px; /* Smaller font */
             border: none;
             border-radius: 4px;
             cursor: pointer;
             text-decoration: none;
             font-weight: 600;
+            white-space: nowrap; /* Prevent text wrapping */
         }
 
         .action-btn.respond { background: #3498db; color: white; }
+        .action-btn.edit { background: #27ae60; color: white; }
         .action-btn.archive { background: #f39c12; color: white; }
         .action-btn.delete { background: #e74c3c; color: white; }
         .action-btn:hover { opacity: 0.8; }
+
+        .triage-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .status-pending { background: #f39c12; }
+        .status-triaged { background: #3498db; }
+        .status-completed { background: #27ae60; }
+
+        .completed-item {
+            opacity: 0.7;
+            order: 999;
+        }
+
+        .completed-item .item-header {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 5px;
+        }
+
+        .reference-person {
+            color: #9b59b6;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 0;
+            border: none;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            opacity: 0.7;
+        }
+
+        .form-group {
+            margin: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-actions {
+            padding: 20px;
+            border-top: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
 
         .archived-tabs {
             display: flex;
@@ -343,7 +519,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
-            margin-right: 140px; /* Increased space for action buttons */
+            margin-right: 180px; /* Even more space for edit button */
             padding-right: 10px; /* Additional padding for better spacing */
         }
 
@@ -359,21 +535,58 @@
 
         .item-type {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 700;
             color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            border: 2px solid rgba(255,255,255,0.2);
+            margin: 2px 0;
         }
 
-        .type-correction { background: #e74c3c; }
-        .type-update { background: #e74c3c; }
-        .type-new_person { background: #27ae60; }
-        .type-feedback { background: #9b59b6; }
-        .type-question { background: #f39c12; }
-        .type-bug { background: #e74c3c; }
-        .type-feature { background: #3498db; }
-        .type-general { background: #34495e; color: white; }
+        .type-correction { 
+            background: linear-gradient(135deg, #c0392b, #a93226); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+            color: white !important;
+        }
+        .type-update { 
+            background: linear-gradient(135deg, #c0392b, #a93226); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+            color: white !important;
+        }
+        .type-new_person { 
+            background: linear-gradient(135deg, #219a52, #1e8449); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+            color: white !important;
+        }
+        .type-feedback { 
+            background: linear-gradient(135deg, #8e44ad, #7d3c98); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+            color: white !important;
+        }
+        .type-question { 
+            background: linear-gradient(135deg, #e67e22, #d35400); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+            color: white !important;
+        }
+        .type-bug { 
+            background: linear-gradient(135deg, #c0392b, #a93226); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+            color: white !important;
+        }
+        .type-feature { 
+            background: linear-gradient(135deg, #2980b9, #2471a3); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+            color: white !important;
+        }
+        .type-general { 
+            background: linear-gradient(135deg, #2c3e50, #1b2631); 
+            color: white !important; 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+        }
 
         .item-content {
             margin-top: 10px;
@@ -428,8 +641,8 @@
             .nav-buttons { flex-direction: column; align-items: center; }
             .nav-btn { width: 100%; max-width: 300px; text-align: center; }
             .endpoint-item { flex-direction: column; align-items: flex-start; gap: 10px; }
-            .item-header { margin-right: 110px; padding-right: 5px; } /* Increased margin on mobile */
-            .action-btn { font-size: 10px; padding: 3px 6px; } /* Smaller buttons on mobile */
+            .item-header { margin-right: 150px; padding-right: 5px; } /* Increased margin on mobile for edit button */
+            .action-btn { font-size: 9px; padding: 3px 5px; } /* Even smaller buttons on mobile */
         }
     </style>
 </head>
@@ -646,25 +859,40 @@
                 return;
             }
 
-            const html = submissions.map((submission, index) => {
+            // Sort submissions by triage status (pending first, completed last)
+            const sortedSubmissions = submissions.sort((a, b) => {
+                const statusOrder = { 'pending': 1, 'triaged': 2, 'completed': 3 };
+                const aOrder = statusOrder[a.triage_status] || 1;
+                const bOrder = statusOrder[b.triage_status] || 1;
+                return aOrder - bOrder;
+            });
+
+            const html = sortedSubmissions.map((submission, index) => {
                 const date = new Date(submission.timestamp).toLocaleDateString();
                 const time = new Date(submission.timestamp).toLocaleTimeString();
+                const isCompleted = submission.triage_status === 'completed';
+                const status = submission.triage_status || 'pending';
                 
                 return `
-                    <div class="submission-item">
+                    <div class="submission-item ${isCompleted ? 'completed-item' : ''}">
                         <div class="item-actions">
+                            <button class="action-btn edit" onclick="editSubmission(${submission.id})">✏️ Edit</button>
                             <button class="action-btn respond" onclick="respondToSubmission(${index})">📧 Respond</button>
                             <button class="action-btn archive" onclick="archiveSubmission(${index})">📁 Archive</button>
                         </div>
                         <div class="item-header">
-                            <div class="item-title">${safeName(submission.person_name || submission.given_name + ' ' + submission.surname)}</div>
+                            <div class="item-title">
+                                ${safeName(submission.person_name || submission.given_name + ' ' + submission.surname)}
+                                <span class="triage-status status-${status}">${status.toUpperCase()}</span>
+                            </div>
                             <div class="item-date">${date} ${time}</div>
                         </div>
                         <div class="item-type type-${submission.type}">${submission.type.replace('_', ' ').toUpperCase()}</div>
                         <div class="item-content">
                             <strong>Submitter:</strong> ${safeName(submission.submitter_name)} (${safeName(submission.submitter_email)})<br>
+                            ${submission.reference_person_name ? '<strong>Reference Person:</strong> <span class="reference-person">' + safeName(submission.reference_person_name) + '</span><br>' : ''}
                             ${submission.changes ? '<strong>Changes:</strong> ' + safeName(submission.changes) + '<br>' : ''}
-                            ${submission.notes ? '<strong>Notes:</strong> ' + safeName(submission.notes) + '<br>' : ''}
+                            ${submission.notes ? '<strong>Admin Notes:</strong> ' + safeName(submission.notes) + '<br>' : ''}
                             ${submission.sources ? '<strong>Sources:</strong> ' + safeName(submission.sources) : ''}
                         </div>
                     </div>
@@ -682,24 +910,40 @@
                 return;
             }
 
-            const html = feedbackList.map((feedback, index) => {
+            // Sort feedback by triage status (pending first, completed last)
+            const sortedFeedback = feedbackList.sort((a, b) => {
+                const statusOrder = { 'pending': 1, 'triaged': 2, 'completed': 3 };
+                const aOrder = statusOrder[a.triage_status] || 1;
+                const bOrder = statusOrder[b.triage_status] || 1;
+                return aOrder - bOrder;
+            });
+
+            const html = sortedFeedback.map((feedback, index) => {
                 const date = new Date(feedback.timestamp).toLocaleDateString();
                 const time = new Date(feedback.timestamp).toLocaleTimeString();
+                const isCompleted = feedback.triage_status === 'completed';
+                const status = feedback.triage_status || 'pending';
                 
                 return `
-                    <div class="feedback-item">
+                    <div class="feedback-item ${isCompleted ? 'completed-item' : ''}">
                         <div class="item-actions">
+                            <button class="action-btn edit" onclick="editFeedback(${feedback.id})">✏️ Edit</button>
                             <button class="action-btn respond" onclick="respondToFeedback(${index})">📧 Respond</button>
                             <button class="action-btn archive" onclick="archiveFeedback(${index})">📁 Archive</button>
                         </div>
                         <div class="item-header">
-                            <div class="item-title">${safeName(feedback.subject)}</div>
+                            <div class="item-title">
+                                ${safeName(feedback.subject)}
+                                <span class="triage-status status-${status}">${status.toUpperCase()}</span>
+                            </div>
                             <div class="item-date">${date} ${time}</div>
                         </div>
                         <div class="item-type type-${feedback.feedback_type}">${feedback.feedback_type ? feedback.feedback_type.toUpperCase() : 'GENERAL'}</div>
                         <div class="item-content">
                             <strong>From:</strong> ${safeName(feedback.submitter_name)} ${feedback.submitter_email ? '(' + safeName(feedback.submitter_email) + ')' : ''}<br>
+                            ${feedback.reference_person_name ? '<strong>Reference Person:</strong> <span class="reference-person">' + safeName(feedback.reference_person_name) + '</span><br>' : ''}
                             <strong>Message:</strong> ${safeName(feedback.message)}<br>
+                            ${feedback.notes ? '<strong>Admin Notes:</strong> ' + safeName(feedback.notes) + '<br>' : ''}
                             ${feedback.page_url ? '<strong>Page:</strong> ' + safeName(feedback.page_url) : ''}
                         </div>
                     </div>
@@ -1128,6 +1372,173 @@
         }
 
         // Email response functions
+        function editSubmission(submissionId) {
+            // Find submission by ID
+            const submission = currentSubmissions.find(s => s.id === submissionId);
+            if (!submission) {
+                alert('Submission not found');
+                return;
+            }
+            
+            // Set modal title and store current record data
+            document.getElementById('editModalTitle').textContent = '✏️ Edit Submission';
+            window.currentEditRecord = {
+                type: 'submission',
+                id: submissionId,
+                data: submission
+            };
+            
+            // Populate form fields
+            document.getElementById('editTriageStatus').value = submission.triage_status || 'pending';
+            document.getElementById('editNotes').value = submission.notes || '';
+            document.getElementById('editReferencePersonId').value = submission.reference_person_id || '';
+            document.getElementById('editReferencePersonDisplay').value = submission.reference_person_name || '';
+            
+            // Show submitter info
+            const personName = submission.person_name || (submission.given_name + ' ' + submission.surname);
+            document.getElementById('editSubmitterInfo').innerHTML = `
+                <strong>Submitter:</strong> ${safeName(submission.submitter_name)} (${safeName(submission.submitter_email)})<br>
+                <strong>Person:</strong> ${safeName(personName)}<br>
+                <strong>Type:</strong> ${submission.type.replace('_', ' ').toUpperCase()}<br>
+                <strong>Submitted:</strong> ${new Date(submission.timestamp).toLocaleDateString()}
+            `;
+            
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function editFeedback(feedbackId) {
+            // Find feedback by ID
+            const feedback = currentFeedback.find(f => f.id === feedbackId);
+            if (!feedback) {
+                alert('Feedback not found');
+                return;
+            }
+            
+            // Set modal title and store current record data
+            document.getElementById('editModalTitle').textContent = '✏️ Edit Feedback';
+            window.currentEditRecord = {
+                type: 'feedback',
+                id: feedbackId,
+                data: feedback
+            };
+            
+            // Populate form fields
+            document.getElementById('editTriageStatus').value = feedback.triage_status || 'pending';
+            document.getElementById('editNotes').value = feedback.notes || '';
+            document.getElementById('editReferencePersonId').value = feedback.reference_person_id || '';
+            document.getElementById('editReferencePersonDisplay').value = feedback.reference_person_name || '';
+            
+            // Show submitter info
+            document.getElementById('editSubmitterInfo').innerHTML = `
+                <strong>From:</strong> ${safeName(feedback.submitter_name)} (${safeName(feedback.submitter_email)})<br>
+                <strong>Type:</strong> ${feedback.feedback_type ? feedback.feedback_type.toUpperCase() : 'GENERAL'}<br>
+                <strong>Subject:</strong> ${safeName(feedback.subject)}<br>
+                <strong>Submitted:</strong> ${new Date(feedback.timestamp).toLocaleDateString()}
+            `;
+            
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function saveEditChanges() {
+            if (!window.currentEditRecord) {
+                alert('No record selected for editing');
+                return;
+            }
+            
+            const updates = {
+                triage_status: document.getElementById('editTriageStatus').value,
+                notes: document.getElementById('editNotes').value.trim(),
+                reference_person_id: document.getElementById('editReferencePersonId').value
+            };
+            
+            const endpoint = window.currentEditRecord.type === 'submission' ? 
+                '/update_submission_admin' : '/update_feedback_admin';
+            
+            const requestData = {
+                [window.currentEditRecord.type + '_id']: window.currentEditRecord.id,
+                ...updates
+            };
+            
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Record updated successfully!');
+                    closeModal('editModal');
+                    
+                    // Refresh the appropriate list
+                    const recordType = window.currentEditRecord.type;
+                    window.currentEditRecord = null;
+                    
+                    if (recordType === 'submission') {
+                        loadSubmissions();
+                    } else {
+                        loadFeedback();
+                    }
+                } else {
+                    alert('Error updating record: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update record');
+            });
+        }
+
+        function searchReferencePersonForEdit() {
+            document.getElementById('editReferenceSearchModal').style.display = 'block';
+        }
+
+        function clearReferencePerson() {
+            document.getElementById('editReferencePersonId').value = '';
+            document.getElementById('editReferencePersonDisplay').value = '';
+        }
+
+        function searchPersonForEdit() {
+            const query = document.getElementById('editPersonSearch').value.trim();
+            const resultsContainer = document.getElementById('editPersonSearchResults');
+            
+            if (query.length < 2) {
+                resultsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">Start typing to search for a person...</div>';
+                return;
+            }
+            
+            resultsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">Searching...</div>';
+            
+            fetch(`/search_person_for_admin?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.matches.length > 0) {
+                        const html = data.matches.map(person => `
+                            <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; hover:background: #f5f5f5;" 
+                                 onclick="selectReferencePersonForEdit('${person.id}', '${person.name}')">
+                                <strong>${person.name}</strong>
+                                ${person.birth_year || person.death_year ? 
+                                    `<span style="color: #666; font-size: 0.9em;">(${person.birth_year || '?'} - ${person.death_year || 'present'})</span>` : 
+                                    ''}
+                            </div>
+                        `).join('');
+                        resultsContainer.innerHTML = html;
+                    } else {
+                        resultsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">No persons found matching your search.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #e74c3c;">Error searching for persons.</div>';
+                });
+        }
+
+        function selectReferencePersonForEdit(personId, personName) {
+            document.getElementById('editReferencePersonId').value = personId;
+            document.getElementById('editReferencePersonDisplay').value = personName;
+            closeModal('editReferenceSearchModal');
+        }
+
         function respondToSubmission(index) {
             const submission = currentSubmissions[index];
             if (!submission) {
@@ -1327,6 +1738,67 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('responseModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="sendEmailResponse()">Send Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Record Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editModalTitle">✏️ Edit Record</h2>
+                <span class="close" onclick="closeModal('editModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label for="editTriageStatus">Triage Status:</label>
+                <select id="editTriageStatus">
+                    <option value="pending">🔄 Pending</option>
+                    <option value="triaged">🔍 Triaged</option>
+                    <option value="completed">✅ Completed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editReferencePerson">Reference Person:</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="editReferencePersonDisplay" readonly placeholder="No reference person assigned" style="flex: 1; background: #f5f5f5;">
+                    <button type="button" class="btn btn-secondary" onclick="searchReferencePersonForEdit()" style="padding: 8px 12px;">🔍 Search</button>
+                    <button type="button" class="btn btn-warning" onclick="clearReferencePerson()" style="padding: 8px 12px;">✖️ Clear</button>
+                </div>
+                <input type="hidden" id="editReferencePersonId">
+            </div>
+            <div class="form-group">
+                <label for="editNotes">Admin Notes:</label>
+                <textarea id="editNotes" placeholder="Add notes for internal reference..." rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Submitter Information:</label>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; color: #555;">
+                    <div id="editSubmitterInfo">Loading...</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reference Person Search Modal for Edit -->
+    <div id="editReferenceSearchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔍 Search Reference Person</h2>
+                <span class="close" onclick="closeModal('editReferenceSearchModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label for="editPersonSearch">Search for a person:</label>
+                <input type="text" id="editPersonSearch" placeholder="Type a name to search..." onkeyup="searchPersonForEdit()">
+            </div>
+            <div id="editPersonSearchResults" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; margin-top: 10px;">
+                <div style="padding: 20px; text-align: center; color: #7f8c8d;">Start typing to search for a person...</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('editReferenceSearchModal')">Cancel</button>
             </div>
         </div>
     </div>
