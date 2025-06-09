@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 import json
 import os
 import smtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -522,6 +523,7 @@ def export_submissions():
             'count': len(active_submissions)
         })
     except Exception as e:
+        logging.error(f"Export submissions error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/export_feedback')
@@ -540,6 +542,7 @@ def export_feedback():
             'count': len(active_feedback)
         })
     except Exception as e:
+        logging.error(f"Export feedback error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/archive_submission/<int:submission_index>', methods=['POST'])
@@ -551,23 +554,35 @@ def archive_submission(submission_index):
         if submission_index < 0 or submission_index >= len(submissions):
             return jsonify({'success': False, 'error': 'Invalid submission index'}), 400
         
-        # Mark as archived
-        submissions[submission_index]['archived'] = True
-        submissions[submission_index]['archived_at'] = datetime.now().isoformat()
-        submissions[submission_index]['archived_by'] = session.get('admin_authenticated', 'admin')
+        submission = submissions[submission_index]
+        submission_id = submission.get('id')
         
-        # Save back to file
-        save_submissions_list(submissions)
+        if not submission_id:
+            return jsonify({'success': False, 'error': 'Submission ID not found'}), 400
         
-        # Log the archiving action
-        log_admin_action('archive_submission', {
-            'submission_index': submission_index,
-            'submission_type': submissions[submission_index].get('type'),
-            'submitter': submissions[submission_index].get('submitter_name')
-        })
+        # Update in database
+        updates = {
+            'archived': True,
+            'archived_at': datetime.now().isoformat(),
+            'archived_by': session.get('admin_name', 'admin')
+        }
         
-        return jsonify({'success': True, 'message': 'Submission archived successfully'})
+        success = db.update_submission(submission_id, updates)
+        
+        if success:
+            # Log the archiving action
+            log_admin_action('archive_submission', {
+                'submission_id': submission_id,
+                'submission_type': submission.get('type'),
+                'submitter': submission.get('submitter_name')
+            })
+            
+            return jsonify({'success': True, 'message': 'Submission archived successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to archive submission'}), 400
+        
     except Exception as e:
+        logging.error(f"Archive submission error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/archive_feedback/<int:feedback_index>', methods=['POST'])
@@ -579,23 +594,35 @@ def archive_feedback(feedback_index):
         if feedback_index < 0 or feedback_index >= len(feedback_list):
             return jsonify({'success': False, 'error': 'Invalid feedback index'}), 400
         
-        # Mark as archived
-        feedback_list[feedback_index]['archived'] = True
-        feedback_list[feedback_index]['archived_at'] = datetime.now().isoformat()
-        feedback_list[feedback_index]['archived_by'] = session.get('admin_authenticated', 'admin')
+        feedback = feedback_list[feedback_index]
+        feedback_id = feedback.get('id')
         
-        # Save back to file
-        save_feedback_list(feedback_list)
+        if not feedback_id:
+            return jsonify({'success': False, 'error': 'Feedback ID not found'}), 400
         
-        # Log the archiving action
-        log_admin_action('archive_feedback', {
-            'feedback_index': feedback_index,
-            'feedback_type': feedback_list[feedback_index].get('feedback_type'),
-            'submitter': feedback_list[feedback_index].get('submitter_name')
-        })
+        # Update in database
+        updates = {
+            'archived': True,
+            'archived_at': datetime.now().isoformat(),
+            'archived_by': session.get('admin_name', 'admin')
+        }
         
-        return jsonify({'success': True, 'message': 'Feedback archived successfully'})
+        success = db.update_feedback(feedback_id, updates)
+        
+        if success:
+            # Log the archiving action
+            log_admin_action('archive_feedback', {
+                'feedback_id': feedback_id,
+                'feedback_type': feedback.get('feedback_type'),
+                'submitter': feedback.get('submitter_name')
+            })
+            
+            return jsonify({'success': True, 'message': 'Feedback archived successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to archive feedback'}), 400
+            
     except Exception as e:
+        logging.error(f"Archive feedback error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/view_archived')
@@ -629,24 +656,31 @@ def delete_archived_submission(submission_index):
             return jsonify({'success': False, 'error': 'Invalid submission index'}), 400
         
         submission = submissions[submission_index]
+        submission_id = submission.get('id')
+        
+        if not submission_id:
+            return jsonify({'success': False, 'error': 'Submission ID not found'}), 400
+            
         if not submission.get('archived', False):
             return jsonify({'success': False, 'error': 'Submission must be archived before deletion'}), 400
         
         # Log the deletion action before removing
         log_admin_action('delete_archived_submission', {
-            'submission_index': submission_index,
+            'submission_id': submission_id,
             'submission_data': submission,
             'deleted_at': datetime.now().isoformat()
         })
         
-        # Remove from list
-        del submissions[submission_index]
+        # Delete from database
+        success = db.delete_submission(submission_id)
         
-        # Save back to file
-        save_submissions_list(submissions)
-        
-        return jsonify({'success': True, 'message': 'Archived submission deleted permanently'})
+        if success:
+            return jsonify({'success': True, 'message': 'Archived submission deleted permanently'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to delete submission'}), 400
+            
     except Exception as e:
+        logging.error(f"Delete submission error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/delete_archived_feedback/<int:feedback_index>', methods=['DELETE'])
@@ -659,24 +693,31 @@ def delete_archived_feedback(feedback_index):
             return jsonify({'success': False, 'error': 'Invalid feedback index'}), 400
         
         feedback = feedback_list[feedback_index]
+        feedback_id = feedback.get('id')
+        
+        if not feedback_id:
+            return jsonify({'success': False, 'error': 'Feedback ID not found'}), 400
+            
         if not feedback.get('archived', False):
             return jsonify({'success': False, 'error': 'Feedback must be archived before deletion'}), 400
         
         # Log the deletion action before removing
         log_admin_action('delete_archived_feedback', {
-            'feedback_index': feedback_index,
+            'feedback_id': feedback_id,
             'feedback_data': feedback,
             'deleted_at': datetime.now().isoformat()
         })
         
-        # Remove from list
-        del feedback_list[feedback_index]
+        # Delete from database
+        success = db.delete_feedback(feedback_id)
         
-        # Save back to file
-        save_feedback_list(feedback_list)
-        
-        return jsonify({'success': True, 'message': 'Archived feedback deleted permanently'})
+        if success:
+            return jsonify({'success': True, 'message': 'Archived feedback deleted permanently'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to delete feedback'}), 400
+            
     except Exception as e:
+        logging.error(f"Delete feedback error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/admin_audit_log')
