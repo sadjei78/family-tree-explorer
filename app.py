@@ -15,6 +15,7 @@ from generation_calculator import GenerationCalculator
 DEBUG = os.getenv('FLASK_ENV') != 'production'
 PORT = int(os.getenv('PORT', 5001))
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+EXPLORE_PASSWORD = os.getenv('EXPLORE_PASSWORD', 'family2025')
 
 # Email Configuration
 SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -65,6 +66,10 @@ def homepage():
 @app.route('/explore')
 def index():
     """Main family tree explorer interface"""
+    # Check if user has entered the explore password
+    if not session.get('explore_authenticated'):
+        return redirect(url_for('homepage'))
+    
     # Get user's reference person from session, or default
     user_reference_person = session.get('reference_person_id')
     if user_reference_person is None:
@@ -382,6 +387,19 @@ def get_reference_person():
         'reference_person_id': user_reference_person,
         'reference_person_name': reference_name
     })
+
+@app.route('/verify_explore_password', methods=['POST'])
+def verify_explore_password():
+    """Verify the explore password"""
+    data = request.get_json()
+    password = data.get('password', '')
+    
+    if password == EXPLORE_PASSWORD:
+        # Store in session that user has entered correct password
+        session['explore_authenticated'] = True
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'error': 'Invalid password'})
 
 @app.route('/submit_update', methods=['POST'])
 def submit_update():

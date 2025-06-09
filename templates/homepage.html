@@ -90,6 +90,9 @@
             position: relative;
             overflow: hidden;
             min-width: 350px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
         }
 
         .btn-explore:hover {
@@ -420,11 +423,32 @@
             </div>
 
             <div class="explore-cta">
-                <a href="/explore" class="btn-explore">
+                <button onclick="promptForPassword()" class="btn-explore">
                     <span class="explore-icon">🌳</span>
                     <span class="explore-text">Start Exploring the Family Tree</span>
                     <span class="explore-subtitle">Begin your journey through our family history</span>
-                </a>
+                </button>
+            </div>
+
+            <!-- Password Modal -->
+            <div id="passwordModal" class="modal" style="display: none;">
+                <div class="modal-background" onclick="closePasswordModal()"></div>
+                <div class="modal-content">
+                    <span class="close" onclick="closePasswordModal()">&times;</span>
+                    <h2>🔐 Family Tree Access</h2>
+                    <p>Please enter the family password to access the family tree:</p>
+                    <div class="form-group">
+                        <label for="explorePassword">Password:</label>
+                        <input type="password" id="explorePassword" placeholder="Enter family password" onkeypress="handlePasswordKeypress(event)">
+                    </div>
+                    <div id="passwordError" style="color: #e74c3c; margin-top: 10px; display: none;">
+                        Incorrect password. Please try again.
+                    </div>
+                    <div class="form-buttons">
+                        <button type="button" class="btn-cancel" onclick="closePasswordModal()">Cancel</button>
+                        <button type="button" class="btn-submit" onclick="checkPassword()">Enter Family Tree</button>
+                    </div>
+                </div>
             </div>
 
             <div class="stats-grid">
@@ -621,7 +645,58 @@
             if (e.key === 'Escape' && document.getElementById('feedbackModal').style.display === 'block') {
                 closeFeedbackForm();
             }
+            if (e.key === 'Escape' && document.getElementById('passwordModal').style.display === 'block') {
+                closePasswordModal();
+            }
         });
+
+        // Password modal functions
+        function promptForPassword() {
+            document.getElementById('passwordModal').style.display = 'block';
+            document.getElementById('explorePassword').focus();
+            document.getElementById('passwordError').style.display = 'none';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('explorePassword').value = '';
+            document.getElementById('passwordError').style.display = 'none';
+        }
+
+        function handlePasswordKeypress(event) {
+            if (event.key === 'Enter') {
+                checkPassword();
+            }
+        }
+
+        function checkPassword() {
+            const password = document.getElementById('explorePassword').value;
+            
+            // Send password to server for verification
+            fetch('/verify_explore_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Password correct, redirect to explore page
+                    window.location.href = '/explore';
+                } else {
+                    // Show error
+                    document.getElementById('passwordError').style.display = 'block';
+                    document.getElementById('explorePassword').value = '';
+                    document.getElementById('explorePassword').focus();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Error checking password. Please try again.');
+            });
+        }
     </script>
 </body>
 </html> 
