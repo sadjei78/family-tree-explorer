@@ -31,8 +31,7 @@ family_data = parser.parse_file(gedcom_file)
 relationship_calc = RelationshipCalculator(family_data)
 generation_calc = GenerationCalculator(family_data['individuals'], family_data['families'])
 
-# Set default reference person (will be initialized after function definition)
-current_reference_person = None
+# Reference person is now stored per-user in Flask sessions
 
 # Authentication decorator
 def admin_required(f):
@@ -56,21 +55,21 @@ def homepage():
 @app.route('/explore')
 def index():
     """Main family tree explorer interface"""
-    global current_reference_person
-    
-    # Initialize reference person if not set
-    if current_reference_person is None:
-        current_reference_person = find_main_person()
+    # Get user's reference person from session, or default
+    user_reference_person = session.get('reference_person_id')
+    if user_reference_person is None:
+        user_reference_person = find_main_person()
+        session['reference_person_id'] = user_reference_person
     
     # Get current reference person data to display on load
-    reference_person = family_data['individuals'].get(current_reference_person, {})
+    reference_person = family_data['individuals'].get(user_reference_person, {})
     reference_name = "Unknown"
     if reference_person.get('names'):
         primary_name = reference_person['names'][0]
         reference_name = f"{primary_name.get('given', '')} {primary_name.get('surname', '')}".strip()
     
     return render_template('index.html', 
-                         initial_person_id=current_reference_person,
+                         initial_person_id=user_reference_person,
                          reference_person_name=reference_name,
                          app_version=APP_VERSION)
 
@@ -130,19 +129,19 @@ def search():
 
 @app.route('/person/<person_id>')
 def get_person(person_id):
-    global current_reference_person
-    
     if person_id not in family_data['individuals']:
         return jsonify({'error': 'Person not found'}), 404
     
-    # Initialize reference person if not set
-    if current_reference_person is None:
-        current_reference_person = find_main_person()
+    # Get user's reference person from session, or default
+    user_reference_person = session.get('reference_person_id')
+    if user_reference_person is None:
+        user_reference_person = find_main_person()
+        session['reference_person_id'] = user_reference_person
     
     person = family_data['individuals'][person_id]
     
-    # Calculate relationship to the current reference person
-    relationship = relationship_calc.calculate_relationship(current_reference_person, person_id)
+    # Calculate relationship to the user's reference person
+    relationship = relationship_calc.calculate_relationship(user_reference_person, person_id)
     
     # Calculate generation
     generation_label = generation_calc.get_generation_label(person_id)
@@ -157,15 +156,19 @@ def get_person(person_id):
     })
 
 def find_main_person():
-    """Find Rev Emmanuel Adjei as the main reference person"""
+    """Find Rev Emmanuel Adjei as the main reference person (or John Doe in sample data)"""
     for person_id, person in family_data['individuals'].items():
         names = person.get('names', [])
         for name_info in names:
             full_name = f"{name_info.get('given', '')} {name_info.get('surname', '')}".strip()
+            # Look for Rev Emmanuel Adjei in real data
             if 'Emmanuel' in full_name and 'Adjei' in full_name:
                 return person_id
+            # Fallback to John Doe for sample data demonstration
+            if 'John' in full_name and 'Doe' in full_name:
+                return person_id
     
-    # Fallback to first person if Rev Emmanuel not found
+    # Final fallback to first person if neither found
     return list(family_data['individuals'].keys())[0] if family_data['individuals'] else None
 
 def generate_person_summary(person_id):
@@ -309,13 +312,12 @@ def get_common_surnames():
 
 @app.route('/set_reference_person/<person_id>')
 def set_reference_person(person_id):
-    """Set a new reference person for relationship calculations"""
-    global current_reference_person
-    
+    """Set a new reference person for relationship calculations (per user session)"""
     if person_id not in family_data['individuals']:
         return jsonify({'success': False, 'error': 'Person not found'}), 404
     
-    current_reference_person = person_id
+    # Store in user's session
+    session['reference_person_id'] = person_id
     person = family_data['individuals'][person_id]
     
     # Get person name
@@ -332,15 +334,21 @@ def set_reference_person(person_id):
 
 @app.route('/get_reference_person')
 def get_reference_person():
-    """Get current reference person information"""
-    person = family_data['individuals'].get(current_reference_person, {})
+    """Get current reference person information (per user session)"""
+    # Get user's reference person from session, or default
+    user_reference_person = session.get('reference_person_id')
+    if user_reference_person is None:
+        user_reference_person = find_main_person()
+        session['reference_person_id'] = user_reference_person
+    
+    person = family_data['individuals'].get(user_reference_person, {})
     reference_name = "Unknown"
     if person.get('names'):
         primary_name = person['names'][0]
         reference_name = f"{primary_name.get('given', '')} {primary_name.get('surname', '')}".strip()
     
     return jsonify({
-        'reference_person_id': current_reference_person,
+        'reference_person_id': user_reference_person,
         'reference_person_name': reference_name
     })
 
