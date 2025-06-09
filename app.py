@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from gedcom_parser import GedcomParser
 from relationship_calculator import RelationshipCalculator
 from generation_calculator import GenerationCalculator
+from database_setup import db
 
 # Configuration
 DEBUG = os.getenv('FLASK_ENV') != 'production'
@@ -505,17 +506,19 @@ def submit_feedback():
 
 @app.route('/export_submissions')
 def export_submissions():
-    """Export submissions in GEDCOM-compatible format (only non-archived)"""
+    """Export submissions in CSV format and GEDCOM-compatible format"""
     try:
         submissions = load_submissions()
-        # Only export non-archived submissions
+        # Only export non-archived submissions  
         active_submissions = [s for s in submissions if not s.get('archived', False)]
         gedcom_export = generate_gedcom_export(active_submissions)
+        csv_data = db.export_submissions_csv()
         
         return jsonify({
             'success': True,
             'submissions': active_submissions,
             'gedcom_data': gedcom_export,
+            'csv_data': csv_data,
             'count': len(active_submissions)
         })
     except Exception as e:
@@ -528,10 +531,12 @@ def export_feedback():
         feedback_list = load_feedback()
         # Only return non-archived feedback
         active_feedback = [f for f in feedback_list if not f.get('archived', False)]
+        csv_data = db.export_feedback_csv()
         
         return jsonify({
             'success': True,
             'feedback': active_feedback,
+            'csv_data': csv_data,
             'count': len(active_feedback)
         })
     except Exception as e:
@@ -812,70 +817,32 @@ This email was sent in response to your submission to the Family Tree Explorer.
         return jsonify({'success': False, 'error': str(e)}), 400
 
 def save_submission(submission):
-    """Save a submission to the submissions file"""
-    submissions_file = 'family_submissions.json'
-    
-    # Load existing submissions
-    if os.path.exists(submissions_file):
-        with open(submissions_file, 'r', encoding='utf-8') as f:
-            submissions = json.load(f)
-    else:
-        submissions = []
-    
-    # Add new submission
-    submissions.append(submission)
-    
-    # Save back to file
-    with open(submissions_file, 'w', encoding='utf-8') as f:
-        json.dump(submissions, f, indent=2, ensure_ascii=False)
+    """Save a submission to the database"""
+    return db.add_submission(submission)
 
 def load_submissions():
-    """Load all submissions from the submissions file"""
-    submissions_file = 'family_submissions.json'
-    
-    if os.path.exists(submissions_file):
-        with open(submissions_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+    """Load all submissions from the database"""
+    return db.get_all_submissions()
 
 def save_feedback(feedback):
-    """Save feedback to the feedback file"""
-    feedback_file = 'family_feedback.json'
-    
-    # Load existing feedback
-    if os.path.exists(feedback_file):
-        with open(feedback_file, 'r', encoding='utf-8') as f:
-            feedback_list = json.load(f)
-    else:
-        feedback_list = []
-    
-    # Add new feedback
-    feedback_list.append(feedback)
-    
-    # Save back to file
-    with open(feedback_file, 'w', encoding='utf-8') as f:
-        json.dump(feedback_list, f, indent=2, ensure_ascii=False)
+    """Save feedback to the database"""
+    return db.add_feedback(feedback)
 
 def load_feedback():
-    """Load all feedback from the feedback file"""
-    feedback_file = 'family_feedback.json'
-    
-    if os.path.exists(feedback_file):
-        with open(feedback_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+    """Load all feedback from the database"""
+    return db.get_all_feedback()
 
 def save_submissions_list(submissions):
-    """Save submissions list to file"""
-    submissions_file = 'family_submissions.json'
-    with open(submissions_file, 'w', encoding='utf-8') as f:
-        json.dump(submissions, f, indent=2, ensure_ascii=False)
+    """Save submissions list to database - deprecated (use individual add methods)"""
+    # This function is deprecated but kept for backward compatibility
+    for submission in submissions:
+        db.add_submission(submission)
 
 def save_feedback_list(feedback_list):
-    """Save feedback list to file"""
-    feedback_file = 'family_feedback.json'
-    with open(feedback_file, 'w', encoding='utf-8') as f:
-        json.dump(feedback_list, f, indent=2, ensure_ascii=False)
+    """Save feedback list to database - deprecated (use individual add methods)"""
+    # This function is deprecated but kept for backward compatibility  
+    for feedback in feedback_list:
+        db.add_feedback(feedback)
 
 def log_admin_action(action_type, action_data):
     """Log admin actions for audit purposes"""

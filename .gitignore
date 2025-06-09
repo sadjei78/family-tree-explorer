@@ -43,7 +43,10 @@ Thumbs.db
 # Application Files
 family_submissions.json
 family_feedback.json
+family_submissions.json.backup
+family_feedback.json.backup
 backups/
+db_backups/
 
 # Flask
 instance/
@@ -94,9 +97,13 @@ instance/
 .pytest_cache/
 .tox/
 
-# Local development
+# Local development  
 *.sqlite3
 *.db
+family_data.db*
+
+# Database setup is tracked, but actual database files are not
+!database_setup.py
 
 # Keep these files for deployment
 !Weku-2025.ged
