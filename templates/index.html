@@ -879,11 +879,29 @@
         // Modal functions
         function showUpdateForm(personName) {
             document.getElementById('updatePersonName').value = personName;
+            // Auto-fill submitter name with reference person
+            autoFillSubmitterName('updateSubmitterName');
             document.getElementById('updateModal').style.display = 'block';
         }
 
         function showNewPersonForm() {
+            // Auto-fill submitter name with reference person
+            autoFillSubmitterName('newSubmitterName');
             document.getElementById('newPersonModal').style.display = 'block';
+        }
+
+        // Auto-fill submitter name based on reference person
+        function autoFillSubmitterName(fieldId) {
+            fetch('/get_reference_person')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.reference_person_name && data.reference_person_name !== 'Unknown') {
+                        document.getElementById(fieldId).value = data.reference_person_name;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting reference person:', error);
+                });
         }
 
         function closeModal(modalId) {

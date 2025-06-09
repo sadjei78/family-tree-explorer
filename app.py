@@ -157,15 +157,15 @@ def get_person(person_id):
     })
 
 def find_main_person():
-    """Find Sam Adjei (the submitter) as the main reference person"""
+    """Find Rev Emmanuel Adjei as the main reference person"""
     for person_id, person in family_data['individuals'].items():
         names = person.get('names', [])
         for name_info in names:
             full_name = f"{name_info.get('given', '')} {name_info.get('surname', '')}".strip()
-            if 'Sam' in full_name and 'Adjei' in full_name:
+            if 'Emmanuel' in full_name and 'Adjei' in full_name:
                 return person_id
     
-    # Fallback to first person if Sam not found
+    # Fallback to first person if Rev Emmanuel not found
     return list(family_data['individuals'].keys())[0] if family_data['individuals'] else None
 
 def generate_person_summary(person_id):

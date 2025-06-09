@@ -474,7 +474,23 @@
 
     <script>
         function showFeedbackForm() {
+            // Auto-fill name with reference person
+            autoFillFeedbackName();
             document.getElementById('feedbackModal').style.display = 'block';
+        }
+
+        // Auto-fill feedback name based on reference person
+        function autoFillFeedbackName() {
+            fetch('/get_reference_person')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.reference_person_name && data.reference_person_name !== 'Unknown') {
+                        document.getElementById('feedbackName').value = data.reference_person_name;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting reference person:', error);
+                });
         }
 
         function closeFeedbackForm() {
