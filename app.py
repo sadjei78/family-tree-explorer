@@ -102,7 +102,7 @@ def admin_dashboard():
     return render_template('admin.html',
                          app_version=APP_VERSION,
                          database_version=DATABASE_VERSION,
-                         gedcom_filename=GEDCOM_FILENAME,
+                         gedcom_filename=gedcom_file,
                          total_individuals=len(family_data['individuals']),
                          total_families=len(family_data['families']))
 
