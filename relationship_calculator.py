@@ -102,25 +102,61 @@ class RelationshipCalculator:
             
             # Sibling relationships
             if rel1 in ["Child", "Son", "Daughter"] and rel2 in ["Child", "Son", "Daughter"]:
-                return "Sibling"
+                return self._get_sibling_relationship(person2_id)
             
             # Grandparent/grandchild relationships
             if rel1 in ["Child", "Son", "Daughter"] and rel2 in ["Parent", "Father", "Mother"]:
-                return "Grandparent"
+                return self._get_grandparent_relationship(person2_id, person1_id)
             if rel1 in ["Parent", "Father", "Mother"] and rel2 in ["Child", "Son", "Daughter"]:
-                return "Grandchild"
+                return self._get_grandchild_relationship(person2_id)
             
             # Uncle/aunt and niece/nephew relationships
             if rel1 in ["Parent", "Father", "Mother"] and rel2 == "Sibling":
-                return "Uncle/Aunt"
+                return self._get_aunt_uncle_relationship(person2_id)
             if rel1 == "Sibling" and rel2 in ["Child", "Son", "Daughter"]:
-                return "Niece/Nephew"
+                return self._get_niece_nephew_relationship(person2_id)
             
-            # In-law relationships
+            # In-law relationships - spouse's parents
             if rel1 == "Spouse" and rel2 in ["Parent", "Father", "Mother"]:
-                return "Parent-in-law"
+                return self._get_parent_in_law_relationship(person2_id)
+            
+            # In-law relationships - child's spouse
             if rel1 in ["Parent", "Father", "Mother"] and rel2 == "Spouse":
-                return "Child-in-law"
+                return self._get_child_in_law_relationship(person2_id)
+            
+            # In-law relationships - spouse's siblings
+            if rel1 == "Spouse" and rel2 == "Sibling":
+                return self._get_sibling_in_law_relationship(person2_id)
+            
+            # In-law relationships - sibling's spouse
+            if rel1 == "Sibling" and rel2 == "Spouse":
+                return self._get_sibling_in_law_relationship(person2_id)
+        
+        # Handle 4-step relationships for extended in-law relationships
+        if len(path) == 4:
+            middle1 = path[1]
+            middle2 = path[2]
+            rel1 = self._get_direct_relationship(person1_id, middle1)
+            rel2 = self._get_direct_relationship(middle1, middle2)
+            rel3 = self._get_direct_relationship(middle2, person2_id)
+            
+            # Spouse's grandparents (spouse -> parent -> parent)
+            if (rel1 == "Spouse" and 
+                rel2 in ["Parent", "Father", "Mother"] and 
+                rel3 in ["Parent", "Father", "Mother"]):
+                return self._get_grandparent_in_law_relationship(person2_id)
+            
+            # Grandchild's spouse (child -> child -> spouse)
+            if (rel1 in ["Child", "Son", "Daughter"] and 
+                rel2 in ["Child", "Son", "Daughter"] and 
+                rel3 == "Spouse"):
+                return self._get_grandchild_in_law_relationship(person2_id)
+            
+            # Spouse's aunt/uncle (spouse -> parent -> sibling)
+            if (rel1 == "Spouse" and 
+                rel2 in ["Parent", "Father", "Mother"] and 
+                rel3 == "Sibling"):
+                return self._get_aunt_uncle_in_law_relationship(person2_id)
         
         # For complex relationships, provide a general description
         generations_up = 0
@@ -262,4 +298,125 @@ class RelationshipCalculator:
             family = self.families.get(family_id, {})
             children.extend(family.get('children', []))
         
-        return children 
+        return children
+    
+    def _get_sibling_relationship(self, person_id):
+        """Get specific sibling relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Brother"
+        elif sex == 'F':
+            return "Sister"
+        else:
+            return "Sibling"
+    
+    def _get_grandparent_relationship(self, person_id, reference_id):
+        """Get specific grandparent relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Grandfather"
+        elif sex == 'F':
+            return "Grandmother"
+        else:
+            return "Grandparent"
+    
+    def _get_grandchild_relationship(self, person_id):
+        """Get specific grandchild relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Grandson"
+        elif sex == 'F':
+            return "Granddaughter"
+        else:
+            return "Grandchild"
+    
+    def _get_aunt_uncle_relationship(self, person_id):
+        """Get specific aunt/uncle relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Uncle"
+        elif sex == 'F':
+            return "Aunt"
+        else:
+            return "Uncle/Aunt"
+    
+    def _get_niece_nephew_relationship(self, person_id):
+        """Get specific niece/nephew relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Nephew"
+        elif sex == 'F':
+            return "Niece"
+        else:
+            return "Niece/Nephew"
+    
+    def _get_parent_in_law_relationship(self, person_id):
+        """Get specific parent-in-law relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Father-in-law"
+        elif sex == 'F':
+            return "Mother-in-law"
+        else:
+            return "Parent-in-law"
+    
+    def _get_child_in_law_relationship(self, person_id):
+        """Get specific child-in-law relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Son-in-law"
+        elif sex == 'F':
+            return "Daughter-in-law"
+        else:
+            return "Child-in-law"
+    
+    def _get_sibling_in_law_relationship(self, person_id):
+        """Get specific sibling-in-law relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Brother-in-law"
+        elif sex == 'F':
+            return "Sister-in-law"
+        else:
+            return "Sibling-in-law"
+    
+    def _get_grandparent_in_law_relationship(self, person_id):
+        """Get specific grandparent-in-law relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Grandfather-in-law"
+        elif sex == 'F':
+            return "Grandmother-in-law"
+        else:
+            return "Grandparent-in-law"
+    
+    def _get_grandchild_in_law_relationship(self, person_id):
+        """Get specific grandchild-in-law relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Grandson-in-law"
+        elif sex == 'F':
+            return "Granddaughter-in-law"
+        else:
+            return "Grandchild-in-law"
+    
+    def _get_aunt_uncle_in_law_relationship(self, person_id):
+        """Get specific aunt/uncle-in-law relationship with gender"""
+        person = self.individuals.get(person_id, {})
+        sex = person.get('sex', 'U')
+        if sex == 'M':
+            return "Uncle-in-law"
+        elif sex == 'F':
+            return "Aunt-in-law"
+        else:
+            return "Aunt/Uncle-in-law" 
