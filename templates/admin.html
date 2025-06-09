@@ -175,7 +175,7 @@
             background: #2980b9;
         }
 
-        .submissions-container, .feedback-container {
+        .submissions-container, .feedback-container, .archived-container, .audit-container {
             max-height: 400px;
             overflow-y: auto;
             border: 1px solid #e0e0e0;
@@ -183,14 +183,74 @@
             background: #f8f9fa;
         }
 
-        .submission-item, .feedback-item {
+        .submission-item, .feedback-item, .archived-item, .audit-item {
             padding: 15px;
             border-bottom: 1px solid #e0e0e0;
             background: white;
             margin: 8px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
         }
+
+        .archived-item {
+            background: #f5f5f5;
+            border-left: 4px solid #95a5a6;
+        }
+
+        .audit-item {
+            border-left: 4px solid #9b59b6;
+        }
+
+        .item-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .action-btn.archive { background: #f39c12; color: white; }
+        .action-btn.delete { background: #e74c3c; color: white; }
+        .action-btn:hover { opacity: 0.8; }
+
+        .archived-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            color: #7f8c8d;
+        }
+
+        .tab-btn.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .archived-content {
+            min-height: 200px;
+        }
+
+        .btn-secondary { background: linear-gradient(135deg, #95a5a6, #7f8c8d); color: white; }
+        .btn-info { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; }
 
         .item-header {
             display: flex;
@@ -367,6 +427,7 @@
             <div class="action-buttons">
                 <button class="btn btn-primary" onclick="loadSubmissions()">🔄 Refresh</button>
                 <button class="btn btn-success" onclick="exportSubmissions()">📥 Export All</button>
+                <button class="btn btn-secondary" onclick="viewArchived()">📁 View Archived</button>
             </div>
         </div>
 
@@ -379,6 +440,40 @@
             <div class="action-buttons">
                 <button class="btn btn-primary" onclick="loadFeedback()">🔄 Refresh</button>
                 <button class="btn btn-success" onclick="exportFeedback()">📥 Export All</button>
+                <button class="btn btn-secondary" onclick="viewArchived()">📁 View Archived</button>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <h2><span class="card-icon">📁</span>Archived Items</h2>
+            <div id="archivedContainer" class="archived-container" style="display: none;">
+                <div class="archived-tabs">
+                    <button class="tab-btn active" onclick="showArchivedTab('submissions')">Archived Submissions</button>
+                    <button class="tab-btn" onclick="showArchivedTab('feedback')">Archived Feedback</button>
+                </div>
+                <div id="archivedSubmissions" class="archived-content">
+                    <div class="loading">Loading archived submissions...</div>
+                </div>
+                <div id="archivedFeedback" class="archived-content" style="display: none;">
+                    <div class="loading">Loading archived feedback...</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-warning" onclick="hideArchived()">❌ Hide Archived</button>
+                <button class="btn btn-info" onclick="viewAuditLog()">📋 Audit Log</button>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <h2><span class="card-icon">📋</span>Admin Audit Log</h2>
+            <div id="auditLogContainer" class="audit-container" style="display: none;">
+                <div class="loading">Loading audit log...</div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-warning" onclick="hideAuditLog()">❌ Hide Log</button>
+                <button class="btn btn-primary" onclick="loadAuditLog()">🔄 Refresh Log</button>
             </div>
         </div>
     </div>
@@ -443,12 +538,15 @@
                 return;
             }
 
-            const html = submissions.map(submission => {
+            const html = submissions.map((submission, index) => {
                 const date = new Date(submission.timestamp).toLocaleDateString();
                 const time = new Date(submission.timestamp).toLocaleTimeString();
                 
                 return `
                     <div class="submission-item">
+                        <div class="item-actions">
+                            <button class="action-btn archive" onclick="archiveSubmission(${index})">📁 Archive</button>
+                        </div>
                         <div class="item-header">
                             <div class="item-title">${safeName(submission.person_name || submission.given_name + ' ' + submission.surname)}</div>
                             <div class="item-date">${date} ${time}</div>
@@ -475,12 +573,15 @@
                 return;
             }
 
-            const html = feedbackList.map(feedback => {
+            const html = feedbackList.map((feedback, index) => {
                 const date = new Date(feedback.timestamp).toLocaleDateString();
                 const time = new Date(feedback.timestamp).toLocaleTimeString();
                 
                 return `
                     <div class="feedback-item">
+                        <div class="item-actions">
+                            <button class="action-btn archive" onclick="archiveFeedback(${index})">📁 Archive</button>
+                        </div>
                         <div class="item-header">
                             <div class="item-title">${safeName(feedback.subject)}</div>
                             <div class="item-date">${date} ${time}</div>
@@ -534,6 +635,265 @@
                     }
                 })
                 .catch(error => console.error('Error updating stats:', error));
+        }
+
+        // Archive functionality
+        function archiveSubmission(index) {
+            if (!confirm('Archive this submission? It will be moved to the archived items section.')) return;
+            
+            fetch(`/archive_submission/${index}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Submission archived successfully');
+                        loadSubmissions(); // Refresh the list
+                    } else {
+                        alert('Error archiving submission: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to archive submission');
+                });
+        }
+
+        function archiveFeedback(index) {
+            if (!confirm('Archive this feedback? It will be moved to the archived items section.')) return;
+            
+            fetch(`/archive_feedback/${index}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Feedback archived successfully');
+                        loadFeedback(); // Refresh the list
+                    } else {
+                        alert('Error archiving feedback: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to archive feedback');
+                });
+        }
+
+        function viewArchived() {
+            const container = document.getElementById('archivedContainer');
+            container.style.display = 'block';
+            loadArchivedItems();
+        }
+
+        function hideArchived() {
+            document.getElementById('archivedContainer').style.display = 'none';
+        }
+
+        function loadArchivedItems() {
+            fetch('/view_archived')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayArchivedSubmissions(data.archived_submissions || []);
+                        displayArchivedFeedback(data.archived_feedback || []);
+                    } else {
+                        document.getElementById('archivedSubmissions').innerHTML = '<div class="error-message">Error loading archived items: ' + data.error + '</div>';
+                        document.getElementById('archivedFeedback').innerHTML = '<div class="error-message">Error loading archived items: ' + data.error + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('archivedSubmissions').innerHTML = '<div class="error-message">Failed to load archived items</div>';
+                    document.getElementById('archivedFeedback').innerHTML = '<div class="error-message">Failed to load archived items</div>';
+                });
+        }
+
+        function displayArchivedSubmissions(submissions) {
+            const container = document.getElementById('archivedSubmissions');
+            
+            if (submissions.length === 0) {
+                container.innerHTML = '<div class="loading">No archived submissions found</div>';
+                return;
+            }
+
+            const html = submissions.map((submission, index) => {
+                const date = new Date(submission.timestamp).toLocaleDateString();
+                const time = new Date(submission.timestamp).toLocaleTimeString();
+                const archivedDate = submission.archived_at ? new Date(submission.archived_at).toLocaleDateString() : 'Unknown';
+                
+                return `
+                    <div class="archived-item">
+                        <div class="item-actions">
+                            <button class="action-btn delete" onclick="deleteArchivedSubmission(${index})">🗑️ Delete</button>
+                        </div>
+                        <div class="item-header">
+                            <div class="item-title">${safeName(submission.person_name || submission.given_name + ' ' + submission.surname)}</div>
+                            <div class="item-date">Submitted: ${date} ${time} | Archived: ${archivedDate}</div>
+                        </div>
+                        <div class="item-type type-${submission.type}">${submission.type.replace('_', ' ').toUpperCase()}</div>
+                        <div class="item-content">
+                            <strong>Submitter:</strong> ${safeName(submission.submitter_name)} (${safeName(submission.submitter_email)})<br>
+                            <strong>Archived by:</strong> ${safeName(submission.archived_by || 'Unknown')}<br>
+                            ${submission.changes ? '<strong>Changes:</strong> ' + safeName(submission.changes) + '<br>' : ''}
+                            ${submission.notes ? '<strong>Notes:</strong> ' + safeName(submission.notes) + '<br>' : ''}
+                            ${submission.sources ? '<strong>Sources:</strong> ' + safeName(submission.sources) : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function displayArchivedFeedback(feedbackList) {
+            const container = document.getElementById('archivedFeedback');
+            
+            if (feedbackList.length === 0) {
+                container.innerHTML = '<div class="loading">No archived feedback found</div>';
+                return;
+            }
+
+            const html = feedbackList.map((feedback, index) => {
+                const date = new Date(feedback.timestamp).toLocaleDateString();
+                const time = new Date(feedback.timestamp).toLocaleTimeString();
+                const archivedDate = feedback.archived_at ? new Date(feedback.archived_at).toLocaleDateString() : 'Unknown';
+                
+                return `
+                    <div class="archived-item">
+                        <div class="item-actions">
+                            <button class="action-btn delete" onclick="deleteArchivedFeedback(${index})">🗑️ Delete</button>
+                        </div>
+                        <div class="item-header">
+                            <div class="item-title">${safeName(feedback.subject)}</div>
+                            <div class="item-date">Submitted: ${date} ${time} | Archived: ${archivedDate}</div>
+                        </div>
+                        <div class="item-type type-${feedback.feedback_type}">${feedback.feedback_type ? feedback.feedback_type.toUpperCase() : 'GENERAL'}</div>
+                        <div class="item-content">
+                            <strong>From:</strong> ${safeName(feedback.submitter_name)} ${feedback.submitter_email ? '(' + safeName(feedback.submitter_email) + ')' : ''}<br>
+                            <strong>Archived by:</strong> ${safeName(feedback.archived_by || 'Unknown')}<br>
+                            <strong>Message:</strong> ${safeName(feedback.message)}<br>
+                            ${feedback.page_url ? '<strong>Page:</strong> ' + safeName(feedback.page_url) : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function deleteArchivedSubmission(index) {
+            if (!confirm('Permanently delete this archived submission? This action cannot be undone and will be logged for audit purposes.')) return;
+            
+            fetch(`/delete_archived_submission/${index}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Archived submission deleted permanently');
+                        loadArchivedItems(); // Refresh the archived list
+                    } else {
+                        alert('Error deleting archived submission: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to delete archived submission');
+                });
+        }
+
+        function deleteArchivedFeedback(index) {
+            if (!confirm('Permanently delete this archived feedback? This action cannot be undone and will be logged for audit purposes.')) return;
+            
+            fetch(`/delete_archived_feedback/${index}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Archived feedback deleted permanently');
+                        loadArchivedItems(); // Refresh the archived list
+                    } else {
+                        alert('Error deleting archived feedback: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to delete archived feedback');
+                });
+        }
+
+        function showArchivedTab(type) {
+            // Hide all tabs
+            document.getElementById('archivedSubmissions').style.display = 'none';
+            document.getElementById('archivedFeedback').style.display = 'none';
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab
+            if (type === 'submissions') {
+                document.getElementById('archivedSubmissions').style.display = 'block';
+                event.target.classList.add('active');
+            } else if (type === 'feedback') {
+                document.getElementById('archivedFeedback').style.display = 'block';
+                event.target.classList.add('active');
+            }
+        }
+
+        function viewAuditLog() {
+            const container = document.getElementById('auditLogContainer');
+            container.style.display = 'block';
+            loadAuditLog();
+        }
+
+        function hideAuditLog() {
+            document.getElementById('auditLogContainer').style.display = 'none';
+        }
+
+        function loadAuditLog() {
+            const container = document.getElementById('auditLogContainer');
+            container.innerHTML = '<div class="loading">Loading audit log...</div>';
+            
+            fetch('/admin_audit_log')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayAuditLog(data.audit_log || []);
+                    } else {
+                        container.innerHTML = '<div class="error-message">Error loading audit log: ' + data.error + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.innerHTML = '<div class="error-message">Failed to load audit log</div>';
+                });
+        }
+
+        function displayAuditLog(auditLog) {
+            const container = document.getElementById('auditLogContainer');
+            
+            if (auditLog.length === 0) {
+                container.innerHTML = '<div class="loading">No audit log entries found</div>';
+                return;
+            }
+
+            // Sort by timestamp descending (newest first)
+            auditLog.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            const html = auditLog.map(entry => {
+                const date = new Date(entry.timestamp).toLocaleDateString();
+                const time = new Date(entry.timestamp).toLocaleTimeString();
+                
+                return `
+                    <div class="audit-item">
+                        <div class="item-header">
+                            <div class="item-title">${entry.action_type.replace('_', ' ').toUpperCase()}</div>
+                            <div class="item-date">${date} ${time}</div>
+                        </div>
+                        <div class="item-content">
+                            <strong>Admin:</strong> ${safeName(entry.admin_session)}<br>
+                            <strong>IP:</strong> ${safeName(entry.ip_address)}<br>
+                            ${entry.action_data ? '<strong>Details:</strong> ' + safeName(JSON.stringify(entry.action_data)) : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
         }
     </script>
 </body>

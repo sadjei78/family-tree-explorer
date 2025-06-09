@@ -434,16 +434,18 @@ def submit_feedback():
 
 @app.route('/export_submissions')
 def export_submissions():
-    """Export submissions in GEDCOM-compatible format"""
+    """Export submissions in GEDCOM-compatible format (only non-archived)"""
     try:
         submissions = load_submissions()
-        gedcom_export = generate_gedcom_export(submissions)
+        # Only export non-archived submissions
+        active_submissions = [s for s in submissions if not s.get('archived', False)]
+        gedcom_export = generate_gedcom_export(active_submissions)
         
         return jsonify({
             'success': True,
-            'submissions': submissions,
+            'submissions': active_submissions,
             'gedcom_data': gedcom_export,
-            'count': len(submissions)
+            'count': len(active_submissions)
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -453,11 +455,165 @@ def export_feedback():
     """Export all feedback for review"""
     try:
         feedback_list = load_feedback()
+        # Only return non-archived feedback
+        active_feedback = [f for f in feedback_list if not f.get('archived', False)]
         
         return jsonify({
             'success': True,
-            'feedback': feedback_list,
-            'count': len(feedback_list)
+            'feedback': active_feedback,
+            'count': len(active_feedback)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/archive_submission/<int:submission_index>', methods=['POST'])
+@admin_required
+def archive_submission(submission_index):
+    """Archive a specific submission"""
+    try:
+        submissions = load_submissions()
+        if submission_index < 0 or submission_index >= len(submissions):
+            return jsonify({'success': False, 'error': 'Invalid submission index'}), 400
+        
+        # Mark as archived
+        submissions[submission_index]['archived'] = True
+        submissions[submission_index]['archived_at'] = datetime.now().isoformat()
+        submissions[submission_index]['archived_by'] = session.get('admin_authenticated', 'admin')
+        
+        # Save back to file
+        save_submissions_list(submissions)
+        
+        # Log the archiving action
+        log_admin_action('archive_submission', {
+            'submission_index': submission_index,
+            'submission_type': submissions[submission_index].get('type'),
+            'submitter': submissions[submission_index].get('submitter_name')
+        })
+        
+        return jsonify({'success': True, 'message': 'Submission archived successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/archive_feedback/<int:feedback_index>', methods=['POST'])
+@admin_required
+def archive_feedback(feedback_index):
+    """Archive a specific feedback item"""
+    try:
+        feedback_list = load_feedback()
+        if feedback_index < 0 or feedback_index >= len(feedback_list):
+            return jsonify({'success': False, 'error': 'Invalid feedback index'}), 400
+        
+        # Mark as archived
+        feedback_list[feedback_index]['archived'] = True
+        feedback_list[feedback_index]['archived_at'] = datetime.now().isoformat()
+        feedback_list[feedback_index]['archived_by'] = session.get('admin_authenticated', 'admin')
+        
+        # Save back to file
+        save_feedback_list(feedback_list)
+        
+        # Log the archiving action
+        log_admin_action('archive_feedback', {
+            'feedback_index': feedback_index,
+            'feedback_type': feedback_list[feedback_index].get('feedback_type'),
+            'submitter': feedback_list[feedback_index].get('submitter_name')
+        })
+        
+        return jsonify({'success': True, 'message': 'Feedback archived successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/view_archived')
+@admin_required
+def view_archived():
+    """View all archived submissions and feedback"""
+    try:
+        submissions = load_submissions()
+        feedback_list = load_feedback()
+        
+        archived_submissions = [s for s in submissions if s.get('archived', False)]
+        archived_feedback = [f for f in feedback_list if f.get('archived', False)]
+        
+        return jsonify({
+            'success': True,
+            'archived_submissions': archived_submissions,
+            'archived_feedback': archived_feedback,
+            'submission_count': len(archived_submissions),
+            'feedback_count': len(archived_feedback)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/delete_archived_submission/<int:submission_index>', methods=['DELETE'])
+@admin_required
+def delete_archived_submission(submission_index):
+    """Permanently delete an archived submission"""
+    try:
+        submissions = load_submissions()
+        if submission_index < 0 or submission_index >= len(submissions):
+            return jsonify({'success': False, 'error': 'Invalid submission index'}), 400
+        
+        submission = submissions[submission_index]
+        if not submission.get('archived', False):
+            return jsonify({'success': False, 'error': 'Submission must be archived before deletion'}), 400
+        
+        # Log the deletion action before removing
+        log_admin_action('delete_archived_submission', {
+            'submission_index': submission_index,
+            'submission_data': submission,
+            'deleted_at': datetime.now().isoformat()
+        })
+        
+        # Remove from list
+        del submissions[submission_index]
+        
+        # Save back to file
+        save_submissions_list(submissions)
+        
+        return jsonify({'success': True, 'message': 'Archived submission deleted permanently'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/delete_archived_feedback/<int:feedback_index>', methods=['DELETE'])
+@admin_required
+def delete_archived_feedback(feedback_index):
+    """Permanently delete an archived feedback item"""
+    try:
+        feedback_list = load_feedback()
+        if feedback_index < 0 or feedback_index >= len(feedback_list):
+            return jsonify({'success': False, 'error': 'Invalid feedback index'}), 400
+        
+        feedback = feedback_list[feedback_index]
+        if not feedback.get('archived', False):
+            return jsonify({'success': False, 'error': 'Feedback must be archived before deletion'}), 400
+        
+        # Log the deletion action before removing
+        log_admin_action('delete_archived_feedback', {
+            'feedback_index': feedback_index,
+            'feedback_data': feedback,
+            'deleted_at': datetime.now().isoformat()
+        })
+        
+        # Remove from list
+        del feedback_list[feedback_index]
+        
+        # Save back to file
+        save_feedback_list(feedback_list)
+        
+        return jsonify({'success': True, 'message': 'Archived feedback deleted permanently'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/admin_audit_log')
+@admin_required
+def admin_audit_log():
+    """View admin audit log"""
+    try:
+        audit_log = load_audit_log()
+        
+        return jsonify({
+            'success': True,
+            'audit_log': audit_log,
+            'count': len(audit_log)
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -513,6 +669,59 @@ def load_feedback():
     
     if os.path.exists(feedback_file):
         with open(feedback_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_submissions_list(submissions):
+    """Save submissions list to file"""
+    submissions_file = 'family_submissions.json'
+    with open(submissions_file, 'w', encoding='utf-8') as f:
+        json.dump(submissions, f, indent=2, ensure_ascii=False)
+
+def save_feedback_list(feedback_list):
+    """Save feedback list to file"""
+    feedback_file = 'family_feedback.json'
+    with open(feedback_file, 'w', encoding='utf-8') as f:
+        json.dump(feedback_list, f, indent=2, ensure_ascii=False)
+
+def log_admin_action(action_type, action_data):
+    """Log admin actions for audit purposes"""
+    audit_file = 'admin_audit.json'
+    
+    # Load existing audit log
+    if os.path.exists(audit_file):
+        with open(audit_file, 'r', encoding='utf-8') as f:
+            audit_log = json.load(f)
+    else:
+        audit_log = []
+    
+    # Create audit entry
+    audit_entry = {
+        'timestamp': datetime.now().isoformat(),
+        'action_type': action_type,
+        'admin_session': session.get('admin_authenticated', 'unknown'),
+        'user_agent': request.headers.get('User-Agent', ''),
+        'ip_address': request.remote_addr,
+        'action_data': action_data
+    }
+    
+    # Add to log
+    audit_log.append(audit_entry)
+    
+    # Keep only last 1000 entries to prevent file from growing too large
+    if len(audit_log) > 1000:
+        audit_log = audit_log[-1000:]
+    
+    # Save back to file
+    with open(audit_file, 'w', encoding='utf-8') as f:
+        json.dump(audit_log, f, indent=2, ensure_ascii=False)
+
+def load_audit_log():
+    """Load admin audit log"""
+    audit_file = 'admin_audit.json'
+    
+    if os.path.exists(audit_file):
+        with open(audit_file, 'r', encoding='utf-8') as f:
             return json.load(f)
     return []
 
