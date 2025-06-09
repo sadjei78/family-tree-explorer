@@ -388,13 +388,18 @@ def submit_update():
     """Submit an update or correction for an existing person"""
     try:
         data = request.get_json()
+        
+        # Get person name for display in admin
+        person_name = get_person_name(data.get('person_id', ''))
+        
         submission = {
             'type': 'update',
             'person_id': data.get('person_id'),
+            'person_name': person_name,  # Add person name for admin display
             'submitter_name': data.get('submitter_name'),
             'submitter_email': data.get('submitter_email'),
             'timestamp': datetime.now().isoformat(),
-            'changes': data.get('changes', {}),
+            'changes': data.get('changes', ''),  # Store as string, not object
             'notes': data.get('notes', ''),
             'sources': data.get('sources', '')
         }
@@ -411,14 +416,21 @@ def submit_new_person():
     """Submit a new person entry"""
     try:
         data = request.get_json()
+        
+        # Create person name for display
+        given_name = data.get('given_name', '').strip()
+        surname = data.get('surname', '').strip()
+        person_name = f"{given_name} {surname}".strip() or "New Person"
+        
         submission = {
             'type': 'new_person',
+            'person_name': person_name,  # Add person name for admin display
             'submitter_name': data.get('submitter_name'),
             'submitter_email': data.get('submitter_email'),
             'timestamp': datetime.now().isoformat(),
             'person_data': {
-                'given_name': data.get('given_name'),
-                'surname': data.get('surname'),
+                'given_name': given_name,
+                'surname': surname,
                 'birth_date': data.get('birth_date'),
                 'birth_place': data.get('birth_place'),
                 'death_date': data.get('death_date'),

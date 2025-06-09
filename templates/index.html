@@ -634,6 +634,52 @@
         </div>
     </div>
 
+    <!-- Feedback Form Modal -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('feedbackModal')">&times;</span>
+            <h2>Send Feedback</h2>
+            <form id="feedbackForm">
+                <div class="form-group">
+                    <label for="feedbackType">Type of Feedback:</label>
+                    <select id="feedbackType" required>
+                        <option value="">Select...</option>
+                        <option value="question">Question</option>
+                        <option value="bug">Bug Report</option>
+                        <option value="feature">Feature Request</option>
+                        <option value="general">General Feedback</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="feedbackSubmitterName">Your Name *</label>
+                        <input type="text" id="feedbackSubmitterName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedbackSubmitterEmail">Your Email *</label>
+                        <input type="email" id="feedbackSubmitterEmail" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="feedbackSubject">Subject:</label>
+                    <input type="text" id="feedbackSubject" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="feedbackMessage">Message:</label>
+                    <textarea id="feedbackMessage" required rows="4"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('feedbackModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Send Feedback</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         let searchTimeout;
         let currentPersonId = null;
@@ -835,6 +881,9 @@
                             <button class="submit-btn" onclick="showNewPersonForm()">
                                 👤 Add New Person
                             </button>
+                            <button class="submit-btn" onclick="showFeedbackForm('${primaryName}')">
+                                💬 Send Feedback
+                            </button>
                             <button class="submit-btn" onclick="setAsReferencePerson(currentPersonId, '${primaryName}')">
                                 📍 Set as Reference
                             </button>
@@ -888,6 +937,13 @@
             // Auto-fill submitter name with reference person
             autoFillSubmitterName('newSubmitterName');
             document.getElementById('newPersonModal').style.display = 'block';
+        }
+
+        function showFeedbackForm(personName) {
+            // Auto-fill fields
+            autoFillSubmitterName('feedbackSubmitterName');
+            document.getElementById('feedbackSubject').value = `Feedback about ${personName}`;
+            document.getElementById('feedbackModal').style.display = 'block';
         }
 
         // Auto-fill submitter name based on reference person
@@ -987,16 +1043,55 @@
             });
         });
 
+        document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                feedback_type: document.getElementById('feedbackType').value,
+                submitter_name: document.getElementById('feedbackSubmitterName').value,
+                submitter_email: document.getElementById('feedbackSubmitterEmail').value,
+                subject: document.getElementById('feedbackSubject').value,
+                message: document.getElementById('feedbackMessage').value,
+                page_url: window.location.href
+            };
+
+            fetch('/submit_feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Thank you for your feedback! We appreciate your input.');
+                    closeModal('feedbackModal');
+                    document.getElementById('feedbackForm').reset();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Unknown error occurred'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Error sending feedback. Please try again.');
+            });
+        });
+
         // Close modal when clicking outside
         window.addEventListener('click', function(event) {
             const updateModal = document.getElementById('updateModal');
             const newPersonModal = document.getElementById('newPersonModal');
+            const feedbackModal = document.getElementById('feedbackModal');
             
             if (event.target === updateModal) {
                 closeModal('updateModal');
             }
             if (event.target === newPersonModal) {
                 closeModal('newPersonModal');
+            }
+            if (event.target === feedbackModal) {
+                closeModal('feedbackModal');
             }
         });
 
